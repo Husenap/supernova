@@ -2,7 +2,7 @@ AllowShortFunctionsOnASingleLine: false
 BasedOnStyle: Chromium
 BinPackArguments: false
 BinPackParameters: false
-BreakConstructorInitializers: BeforeComma 
+BreakConstructorInitializers: BeforeComma
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ColumnLimit: 110
 AccessModifierOffset: '-4'

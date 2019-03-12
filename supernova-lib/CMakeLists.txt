@@ -21,6 +21,8 @@ source_group("src\\precompiled" FILES ${src_precompiled})
 source_group("src\\include" FILES ${src_include})
 source_group("src\\engine" FILES ${src_engine})
 
+target_link_libraries(${target_name} PUBLIC "compiler-warnings")
+
 target_compile_features(${target_name} INTERFACE cxx_std_17)
 
 set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
