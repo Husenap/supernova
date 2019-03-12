@@ -3,9 +3,13 @@
 #include <supernova/supernova-lib.h>
 
 int main(int, char**) {
-	auto supernova = std::make_unique<sn::supernova>();
+	auto supernova = std::make_unique<snova::supernova>();
 
-	supernova->test();
+	if (supernova->init()) {
+		supernova->run();
+	} else {
+		std::cerr << "Failed to init engine" << std::endl;
+	}
 
 	return 0;
 }

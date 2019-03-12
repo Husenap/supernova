@@ -3,6 +3,7 @@ project("supernova" C CXX)
 
 include("cmake/compiler_warnings.cmake")
 include("cmake/compiler_features.cmake")
+include("cmake/glfw.cmake")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "predefined")
