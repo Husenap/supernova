@@ -2,6 +2,8 @@
 
 #include "../precompiled.h"
 
+#include <map>
+
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifndef NDEBUG
@@ -29,6 +31,10 @@ bool vk_framework::init() {
 	}
 
 	if (!pick_physical_device()) {
+		return false;
+	}
+
+	if (!create_logical_device()) {
 		return false;
 	}
 
@@ -105,7 +111,7 @@ bool vk_framework::setup_debug_messenger() {
 	create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 							  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 							  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	create_info.pfnUserCallback = debug_callback;
+	create_info.pfnUserCallback = vlayer_callback;
 	create_info.pUserData = nullptr;
 
 	if (create_debug_utils_messnger_ext(m_vk_instance, &create_info, nullptr, &m_debug_messenger) !=
@@ -130,24 +136,101 @@ bool vk_framework::pick_physical_device() {
 	std::vector<VkPhysicalDevice> devices(device_count);
 	vkEnumeratePhysicalDevices(m_vk_instance, &device_count, devices.data());
 
+	std::multimap<int, VkPhysicalDevice> candidates;
+
 	for (const auto& device : devices) {
-		if (is_device_suitable(device)) {
-			m_physical_device = device;
-			break;
-		}
+		candidates.insert(std::make_pair(rate_device_suitability(device), device));
 	}
 
-	if (m_physical_device == VK_NULL_HANDLE) {
+	if (candidates.rbegin()->first > 0) {
+		m_physical_device = candidates.rbegin()->second;
+	} else {
 		FATAL_LOG("Failed to find a suitable GPU!");
+		return false;
 	}
 
-	VERBOSE_LOG("Picked physical device");
+	VkPhysicalDeviceProperties device_props;
+	vkGetPhysicalDeviceProperties(m_physical_device, &device_props);
+
+	INFO_LOG("Picked physical device: %s", device_props.deviceName);
 	return true;
 }
 
-bool vk_framework::is_device_suitable(VkPhysicalDevice device) {
-	
+int vk_framework::rate_device_suitability(VkPhysicalDevice device) {
+	int score = 0;
 
+	VkPhysicalDeviceProperties device_props;
+	vkGetPhysicalDeviceProperties(device, &device_props);
+
+	VkPhysicalDeviceFeatures device_features;
+	vkGetPhysicalDeviceFeatures(device, &device_features);
+
+	score += 1000 * (device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
+
+	score += 1000 * (find_queue_families(device).is_complete());
+
+	score += device_props.limits.maxImageDimension2D;
+
+	if (!device_features.geometryShader) {
+		return 0;
+	}
+
+	return score;
+}
+
+queue_family_indices vk_framework::find_queue_families(VkPhysicalDevice device) {
+	queue_family_indices indices;
+
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
+
+	for (uint32_t i = 0; !indices.is_complete() && i < queue_family_count; ++i) {
+		const auto& queue_family = queue_families[i];
+
+		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			indices.m_graphics_family = i;
+		}
+	}
+
+	return indices;
+}
+
+bool vk_framework::create_logical_device() {
+	queue_family_indices indices = find_queue_families(m_physical_device);
+
+	VkDeviceQueueCreateInfo queue_create_info = {};
+	queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queue_create_info.queueFamilyIndex = indices.m_graphics_family.value();
+	queue_create_info.queueCount = 1;
+	float queue_priority = 1.0f;
+	queue_create_info.pQueuePriorities = &queue_priority;
+
+	VkPhysicalDeviceFeatures device_features = {};
+
+	VkDeviceCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	create_info.pQueueCreateInfos = &queue_create_info;
+	create_info.queueCreateInfoCount = 1;
+	create_info.pEnabledFeatures = &device_features;
+
+	create_info.enabledExtensionCount = 0;
+	if (enable_validation_layers) {
+		create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+		create_info.ppEnabledLayerNames = validation_layers.data();
+	} else {
+		create_info.enabledLayerCount = 0;
+	}
+
+	if (vkCreateDevice(m_physical_device, &create_info, nullptr, &m_device) != VK_SUCCESS) {
+		FATAL_LOG("Failed to create logical device!");
+		return false;
+	}
+
+	vkGetDeviceQueue(m_device, indices.m_graphics_family.value(), 0, &m_graphics_queue);
+
+	VERBOSE_LOG("Created logical device");
 	return true;
 }
 
@@ -156,6 +239,7 @@ void vk_framework::destroy() {
 		destroy_debug_utils_messenger_ext(m_vk_instance, m_debug_messenger, nullptr);
 	}
 
+	vkDestroyDevice(m_device, nullptr);
 	vkDestroyInstance(m_vk_instance, nullptr);
 }
 
@@ -192,10 +276,10 @@ std::vector<const char*> vk_framework::get_requried_extensions() {
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
-vk_framework::debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-							 VkDebugUtilsMessageTypeFlagsEXT message_type,
-							 const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-							 void* p_user_data) {
+vk_framework::vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+							  VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
+							  const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+							  void* /*p_user_data*/) {
 	switch (message_severity) {
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
 			VERBOSE_LOG("VLayer: %s", p_callback_data->pMessage);
