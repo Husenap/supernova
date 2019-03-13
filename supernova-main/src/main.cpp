@@ -10,12 +10,7 @@ int main(int, char**) {
 
 	auto supernova = std::make_unique<snova::supernova>();
 
-	try {
-		supernova->run();
-	} catch (const std::exception& e) {
-		std::cerr << e.what() << std::endl;
-		return 1;
-	}
+	supernova->run();
 
 	return 0;
 }

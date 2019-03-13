@@ -15,27 +15,19 @@ void supernova::run() {
 
 bool supernova::init() {
 	if (!m_window.init()) {
-		FATAL_LOG("Failed to init window");
 		return false;
 	}
 
 	if (!m_vk_framework.init()) {
-		FATAL_LOG("Failed to init vk_framework!");
 		return false;
 	}
 
 	return true;
 }
 void supernova::main_loop() {
-	glm::mat4 matrix;
-	glm::vec4 vec;
-	auto test = matrix * vec;
-
 	while (!m_window.should_close()) {
 		glfwPollEvents();
 	}
-
-	destroy();
 }
 void supernova::destroy() {
 	m_vk_framework.destroy();

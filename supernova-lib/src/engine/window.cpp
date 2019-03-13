@@ -14,11 +14,7 @@ bool window::init() {
 		return false;
 	}
 
-	uint32_t extension_count = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-
-	INFO_LOG("%d extensions supported.", extension_count);
-
+	VERBOSE_LOG("Created window");
 	return true;
 }
 bool window::should_close() {
