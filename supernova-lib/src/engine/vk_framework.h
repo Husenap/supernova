@@ -54,6 +54,7 @@ private:
 	VkPhysicalDevice m_physical_device;
 	VkDevice m_device;
 	VkQueue m_graphics_queue;
+	VkQueue m_present_queue;
 	VkSurfaceKHR m_surface;
 };
 }  // namespace snova
