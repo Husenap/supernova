@@ -18,7 +18,7 @@ bool supernova::init() {
 		return false;
 	}
 
-	if (!m_vk_framework.init()) {
+	if (!m_vk_framework.init(m_window)) {
 		return false;
 	}
 

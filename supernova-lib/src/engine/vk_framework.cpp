@@ -2,8 +2,6 @@
 
 #include "../precompiled.h"
 
-#include <map>
-
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifndef NDEBUG
@@ -14,19 +12,20 @@ const bool enable_validation_layers = false;
 
 namespace snova {
 vk_framework::vk_framework()
-	: m_physical_device(VK_NULL_HANDLE) {
-}
+	: m_physical_device(VK_NULL_HANDLE) {}
 
-vk_framework::~vk_framework() {
-}
+vk_framework::~vk_framework() {}
 
-bool vk_framework::init() {
+bool vk_framework::init(const snova::window& window) {
 	if (!create_vk_instance()) {
 		return false;
 	}
 
 	if (enable_validation_layers && !setup_debug_messenger()) {
-		ERROR_LOG("Failed to setup debug messenger");
+		return false;
+	}
+
+	if (!create_surface(window)) {
 		return false;
 	}
 
@@ -124,6 +123,17 @@ bool vk_framework::setup_debug_messenger() {
 	return true;
 }
 
+bool vk_framework::create_surface(const snova::window& window) {
+	if (glfwCreateWindowSurface(m_vk_instance, window.get_window_handle(), nullptr, &m_surface) !=
+		VK_SUCCESS) {
+		FATAL_LOG("Failed to create window surface");
+		return false;
+	}
+
+	VERBOSE_LOG("Created surface");
+	return true;
+}
+
 bool vk_framework::pick_physical_device() {
 	uint32_t device_count = 0;
 	vkEnumeratePhysicalDevices(m_vk_instance, &device_count, nullptr);
@@ -192,6 +202,12 @@ queue_family_indices vk_framework::find_queue_families(VkPhysicalDevice device) 
 		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			indices.m_graphics_family = i;
 		}
+
+		VkBool32 present_support = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &present_support);
+		if (queue_family.queueCount > 0 && present_support) {
+			indices.m_present_family = i;
+		}
 	}
 
 	return indices;
@@ -200,19 +216,26 @@ queue_family_indices vk_framework::find_queue_families(VkPhysicalDevice device) 
 bool vk_framework::create_logical_device() {
 	queue_family_indices indices = find_queue_families(m_physical_device);
 
-	VkDeviceQueueCreateInfo queue_create_info = {};
-	queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_create_info.queueFamilyIndex = indices.m_graphics_family.value();
-	queue_create_info.queueCount = 1;
+	std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+	std::set<uint32_t> unique_queue_families = {indices.m_graphics_family.value(),
+												indices.m_present_family.value()};
+
 	float queue_priority = 1.0f;
-	queue_create_info.pQueuePriorities = &queue_priority;
+	for (uint32_t queue_family : unique_queue_families) {
+		VkDeviceQueueCreateInfo queue_create_info = {};
+		queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queue_create_info.queueFamilyIndex = queue_family;
+		queue_create_info.queueCount = 1;
+		queue_create_info.pQueuePriorities = &queue_priority;
+		queue_create_infos.push_back(queue_create_info);
+	}
 
 	VkPhysicalDeviceFeatures device_features = {};
 
 	VkDeviceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	create_info.pQueueCreateInfos = &queue_create_info;
-	create_info.queueCreateInfoCount = 1;
+	create_info.pQueueCreateInfos = queue_create_infos.data();
+	create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
 	create_info.pEnabledFeatures = &device_features;
 
 	create_info.enabledExtensionCount = 0;
@@ -229,6 +252,7 @@ bool vk_framework::create_logical_device() {
 	}
 
 	vkGetDeviceQueue(m_device, indices.m_graphics_family.value(), 0, &m_graphics_queue);
+	vkGetDeviceQueue(m_device, indices.m_present_family.value(), 0, &m_present_queue);
 
 	VERBOSE_LOG("Created logical device");
 	return true;
@@ -240,6 +264,7 @@ void vk_framework::destroy() {
 	}
 
 	vkDestroyDevice(m_device, nullptr);
+	vkDestroySurfaceKHR(m_vk_instance, m_surface, nullptr);
 	vkDestroyInstance(m_vk_instance, nullptr);
 }
 
@@ -281,12 +306,14 @@ vk_framework::vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_sev
 							  const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
 							  void* /*p_user_data*/) {
 	switch (message_severity) {
+		/*
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
 			VERBOSE_LOG("VLayer: %s", p_callback_data->pMessage);
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
 			INFO_LOG("VLayer: %s", p_callback_data->pMessage);
 			break;
+		*/
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
 			WARNING_LOG("VLayer: %s", p_callback_data->pMessage);
 			break;

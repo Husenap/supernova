@@ -12,7 +12,9 @@ public:
 
 	bool should_close();
 
-void destroy();
+	void destroy();
+
+	GLFWwindow* get_window_handle() const { return m_window_handle; }
 
 private:
 	GLFWwindow* m_window_handle;
