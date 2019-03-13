@@ -8,13 +8,13 @@ public:
 	supernova() {}
 	~supernova() {}
 
-	bool init();
-
 	void run();
 
 private:
-	void destroy();
+	bool init();
+	void main_loop();
+	void cleanup();
 
 	window m_window;
 };
-}  // namespace sn
+}  // namespace snova

@@ -17,4 +17,4 @@ void destroy();
 private:
 	GLFWwindow* m_window_handle;
 };
-}  // namespace sn
+}  // namespace snova

@@ -9,4 +9,5 @@ set(gfx_libraries
 set(gfx_includes
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/glfw/include"
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/glfw/deps"
+	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm"
 	"$ENV{VULKAN_SDK}/Include")

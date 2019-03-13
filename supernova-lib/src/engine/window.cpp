@@ -2,8 +2,6 @@
 
 #include "../precompiled.h"
 
-#include <iostream>
-
 namespace snova {
 bool window::init() {
 	glfwInit();
@@ -11,10 +9,15 @@ bool window::init() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	m_window_handle = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
 
+	if (!m_window_handle) {
+		FATAL_LOG("glfwCreateWindow returned null window handler!");
+		return false;
+	}
+
 	uint32_t extension_count = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
 
-	std::cout << extension_count << " extensions supported" << std::endl;
+	INFO_LOG("%d extensions supported.", extension_count);
 
 	return true;
 }
