@@ -6,12 +6,14 @@
 #include <logger.h>
 
 int main(int, char**) {
+	INFO_LOG("Application Starting...");
+
 	auto supernova = std::make_unique<snova::supernova>();
 
 	try {
 		supernova->run();
 	} catch (const std::exception& e) {
-		ERROR_LOG("Exception: %s", e.what());
+		std::cerr << e.what() << std::endl;
 		return 1;
 	}
 

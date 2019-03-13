@@ -59,13 +59,20 @@ void snova::logger::log(
 		shortFuncName = functionName;
 	}
 
-	printf_s("[%s]%s:%li:%s: %s\n",
+	char buffer2[MaxBufferSize];
+	sprintf_s(buffer2,
+			  "[%s]%s:%li:%s: %s\n",
 			  level_strings[(char)log_level],
 			  shortFile.c_str(),
 			  line,
 			  functionName.c_str(),
 			  buffer);
 
+	printf("%s", buffer2);
+
+	if (log_level == level::Fatal) {
+		throw std::runtime_error(buffer);
+	}
 }
 
 }  // namespace snova

@@ -9,13 +9,18 @@ namespace snova {
 void supernova::run() {
 	if (init()) {
 		main_loop();
-		cleanup();
+		destroy();
 	}
 }
 
 bool supernova::init() {
 	if (!m_window.init()) {
 		FATAL_LOG("Failed to init window");
+		return false;
+	}
+
+	if (!m_vk_framework.init()) {
+		FATAL_LOG("Failed to init vk_framework!");
 		return false;
 	}
 
@@ -30,9 +35,10 @@ void supernova::main_loop() {
 		glfwPollEvents();
 	}
 
-	cleanup();
+	destroy();
 }
-void supernova::cleanup() {
+void supernova::destroy() {
+	m_vk_framework.destroy();
 	m_window.destroy();
 }
 
