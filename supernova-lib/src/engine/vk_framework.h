@@ -80,5 +80,6 @@ private:
 	VkExtent2D m_swapchain_extent;
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
+	VkPipelineLayout m_pipeline_layout;
 };
 }  // namespace snova
