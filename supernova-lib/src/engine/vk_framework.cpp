@@ -25,7 +25,9 @@ bool vk_framework::init(const snova::window& window) {
 	if (!create_logical_device()) return false;
 	if (!create_swapchain()) return false;
 	if (!create_image_views()) return false;
+	if (!create_render_pass()) return false;
 	if (!create_graphics_pipeline()) return false;
+	if (!create_frame_buffers()) return false;
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -433,6 +435,42 @@ bool vk_framework::create_image_views() {
 	return true;
 }
 
+bool vk_framework::create_render_pass() {
+	VkAttachmentDescription color_attachment = {};
+	color_attachment.format = m_swapchain_image_format;
+	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_ref = {};
+	color_attachment_ref.attachment = 0;
+	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attachment_ref;
+
+	VkRenderPassCreateInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_info.attachmentCount = 1;
+	render_pass_info.pAttachments = &color_attachment;
+	render_pass_info.subpassCount = 1;
+	render_pass_info.pSubpasses = &subpass;
+
+	if (vkCreateRenderPass(m_device, &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS) {
+		FATAL_LOG("Failed to create render pass!");
+		return false;
+	}
+
+	VERBOSE_LOG("Created render pass");
+	return true;
+}
+
 static std::vector<char> read_file(const std::string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -471,17 +509,17 @@ bool vk_framework::create_graphics_pipeline() {
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
-	VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
-	vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_info.vertexBindingDescriptionCount = 0;
-	vertex_input_info.pVertexBindingDescriptions = nullptr;
-	vertex_input_info.vertexAttributeDescriptionCount = 0;
-	vertex_input_info.pVertexAttributeDescriptions = nullptr;
+	VkPipelineVertexInputStateCreateInfo vertex_input_state = {};
+	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertex_input_state.vertexBindingDescriptionCount = 0;
+	vertex_input_state.pVertexBindingDescriptions = nullptr;
+	vertex_input_state.vertexAttributeDescriptionCount = 0;
+	vertex_input_state.pVertexAttributeDescriptions = nullptr;
 
-	VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
-	input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	input_assembly_info.primitiveRestartEnable = VK_FALSE;
+	VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {};
+	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	input_assembly_state.primitiveRestartEnable = VK_FALSE;
 
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
@@ -539,9 +577,28 @@ bool vk_framework::create_graphics_pipeline() {
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
 		FATAL_LOG("Failed to create pipeline layout!");
+		return false;
 	}
 
-	
+	VkGraphicsPipelineCreateInfo pipeline_info = {};
+	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipeline_info.stageCount = 2;
+	pipeline_info.pStages = shader_stages;
+	pipeline_info.pVertexInputState = &vertex_input_state;
+	pipeline_info.pInputAssemblyState = &input_assembly_state;
+	pipeline_info.pViewportState = &viewport_state;
+	pipeline_info.pRasterizationState = &rasterizer;
+	pipeline_info.pMultisampleState = &multisampling;
+	pipeline_info.pColorBlendState = &color_blending;
+	pipeline_info.layout = m_pipeline_layout;
+	pipeline_info.renderPass = m_render_pass;
+	pipeline_info.subpass = 0;
+
+	if (vkCreateGraphicsPipelines(
+			m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline)) {
+		FATAL_LOG("Failed to create graphics pipeline!");
+		return false;
+	}
 
 	vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
 	vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
@@ -564,8 +621,38 @@ VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code)
 	return shader_module;
 }
 
+bool vk_framework::create_frame_buffers() {
+	m_swapchain_framebuffers.resize(m_swapchain_image_views.size());
+
+	for (size_t i = 0; i < m_swapchain_image_views.size(); ++i) {
+		VkImageView attachments[] = {m_swapchain_image_views[i]};
+
+		VkFramebufferCreateInfo framebuffer_info = {};
+		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebuffer_info.renderPass = m_render_pass;
+		framebuffer_info.attachmentCount = 1;
+		framebuffer_info.pAttachments = attachments;
+		framebuffer_info.width = m_swapchain_extent.width;
+		framebuffer_info.height = m_swapchain_extent.height;
+		framebuffer_info.layers = 1;
+
+		if (vkCreateFramebuffer(m_device, &framebuffer_info, nullptr, &m_swapchain_framebuffers[i]) !=
+			VK_SUCCESS) {
+			FATAL_LOG("Failed to create framebuffer!");
+			return false;
+		}
+	}
+
+	VERBOSE_LOG("Created framebuffers");
+	return true;
+}
+
 void vk_framework::destroy() {
+	for (auto framebuffer : m_swapchain_framebuffers) vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+
+	vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
 	vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+	vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 
 	for (auto image_view : m_swapchain_image_views) vkDestroyImageView(m_device, image_view, nullptr);
 

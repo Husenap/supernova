@@ -53,8 +53,12 @@ private:
 
 	bool create_image_views();
 
+	bool create_render_pass();
+
 	bool create_graphics_pipeline();
 	VkShaderModule create_shader_module(const std::vector<char>& code);
+
+	bool create_frame_buffers();
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -80,6 +84,9 @@ private:
 	VkExtent2D m_swapchain_extent;
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
+	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 	VkPipelineLayout m_pipeline_layout;
+	VkRenderPass m_render_pass;
+	VkPipeline m_graphics_pipeline;
 };
 }  // namespace snova
