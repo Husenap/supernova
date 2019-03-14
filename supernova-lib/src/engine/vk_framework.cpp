@@ -18,29 +18,13 @@ vk_framework::vk_framework()
 vk_framework::~vk_framework() {}
 
 bool vk_framework::init(const snova::window& window) {
-	if (!create_vk_instance()) {
-		return false;
-	}
-
-	if (enable_validation_layers && !setup_debug_messenger()) {
-		return false;
-	}
-
-	if (!create_surface(window)) {
-		return false;
-	}
-
-	if (!pick_physical_device()) {
-		return false;
-	}
-
-	if (!create_logical_device()) {
-		return false;
-	}
-
-	if (!create_swapchain()) {
-		return false;
-	}
+	if (!create_vk_instance()) return false;
+	if (enable_validation_layers && !setup_debug_messenger()) return false;
+	if (!create_surface(window)) return false;
+	if (!pick_physical_device()) return false;
+	if (!create_logical_device()) return false;
+	if (!create_swapchain()) return false;
+	if (!create_image_views()) return false;
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -343,7 +327,7 @@ bool vk_framework::create_swapchain() {
 	m_swapchain_image_format = surface_format.format;
 	m_swapchain_extent = extent;
 
-	VERBOSE_LOG("Created swap chain");
+	VERBOSE_LOG("Created swapchain");
 	return true;
 }
 
@@ -418,10 +402,42 @@ VkExtent2D vk_framework::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 	}
 }
 
+bool vk_framework::create_image_views() {
+	m_swapchain_image_views.resize(m_swapchain_images.size());
+
+	for (size_t i = 0; i < m_swapchain_images.size(); ++i) {
+		VkImageViewCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		create_info.image = m_swapchain_images[i];
+		create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		create_info.format = m_swapchain_image_format;
+
+		create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+		create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		create_info.subresourceRange.baseMipLevel = 0;
+		create_info.subresourceRange.levelCount = 1;
+		create_info.subresourceRange.baseArrayLayer = 0;
+		create_info.subresourceRange.layerCount = 1;
+
+		if (vkCreateImageView(m_device, &create_info, nullptr, &m_swapchain_image_views[i]) != VK_SUCCESS) {
+			FATAL_LOG("Failed to create image view!");
+		}
+	}
+
+	VERBOSE_LOG("Created image views");
+	return true;
+}
+
 void vk_framework::destroy() {
 	if (enable_validation_layers) {
 		destroy_debug_utils_messenger_ext(m_vk_instance, m_debug_messenger, nullptr);
 	}
+
+	for (auto image_view : m_swapchain_image_views) vkDestroyImageView(m_device, image_view, nullptr);
 
 	vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 	vkDestroyDevice(m_device, nullptr);

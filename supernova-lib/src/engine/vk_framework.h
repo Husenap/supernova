@@ -51,6 +51,8 @@ private:
 	VkPresentModeKHR choose_swap_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
 	VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+	bool create_image_views();
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 					VkDebugUtilsMessageTypeFlagsEXT message_type,
@@ -71,8 +73,9 @@ private:
 	VkQueue m_present_queue;
 	VkSurfaceKHR m_surface;
 	VkSwapchainKHR m_swapchain;
-	std::vector<VkImage> m_swapchain_images;
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
+	std::vector<VkImage> m_swapchain_images;
+	std::vector<VkImageView> m_swapchain_image_views;
 };
 }  // namespace snova
