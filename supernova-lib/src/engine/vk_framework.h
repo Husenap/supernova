@@ -32,6 +32,8 @@ public:
 
 	void destroy();
 
+	void draw_frame();
+
 private:
 	bool create_vk_instance();
 
@@ -59,6 +61,12 @@ private:
 	VkShaderModule create_shader_module(const std::vector<char>& code);
 
 	bool create_frame_buffers();
+
+	bool create_command_pool();
+
+	bool create_command_buffers();
+
+	bool create_semaphores();
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -88,5 +96,9 @@ private:
 	VkPipelineLayout m_pipeline_layout;
 	VkRenderPass m_render_pass;
 	VkPipeline m_graphics_pipeline;
+	VkCommandPool m_command_pool;
+	std::vector<VkCommandBuffer> m_command_buffers;
+	VkSemaphore m_image_available_semaphore;
+	VkSemaphore m_render_finished_semaphore;
 };
 }  // namespace snova

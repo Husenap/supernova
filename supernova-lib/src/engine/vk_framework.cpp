@@ -28,6 +28,9 @@ bool vk_framework::init(const snova::window& window) {
 	if (!create_render_pass()) return false;
 	if (!create_graphics_pipeline()) return false;
 	if (!create_frame_buffers()) return false;
+	if (!create_command_pool()) return false;
+	if (!create_command_buffers()) return false;
+	if (!create_semaphores()) return false;
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -455,12 +458,22 @@ bool vk_framework::create_render_pass() {
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
 
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	render_pass_info.attachmentCount = 1;
 	render_pass_info.pAttachments = &color_attachment;
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
+	render_pass_info.dependencyCount = 1;
+	render_pass_info.pDependencies = &dependency;
 
 	if (vkCreateRenderPass(m_device, &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS) {
 		FATAL_LOG("Failed to create render pass!");
@@ -647,7 +660,98 @@ bool vk_framework::create_frame_buffers() {
 	return true;
 }
 
+bool vk_framework::create_command_pool() {
+	queue_family_indices family_indices = find_queue_families(m_physical_device);
+
+	VkCommandPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	pool_info.queueFamilyIndex = family_indices.m_graphics_family.value();
+
+	if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
+		FATAL_LOG("Failed to create command pool!");
+		return false;
+	}
+
+	VERBOSE_LOG("created command pool");
+	return true;
+}
+
+bool vk_framework::create_command_buffers() {
+	m_command_buffers.resize(m_swapchain_framebuffers.size());
+
+	VkCommandBufferAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.commandPool = m_command_pool;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
+
+	if (vkAllocateCommandBuffers(m_device, &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
+		FATAL_LOG("Failed to allocate command buffers!");
+		return false;
+	}
+
+	for (size_t i = 0; i < m_command_buffers.size(); ++i) {
+		auto& command_buffer = m_command_buffers[i];
+
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+		if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
+			FATAL_LOG("Failed to begin recording command buffer!");
+			return false;
+		}
+
+		VkRenderPassBeginInfo render_pass_info = {};
+		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_info.renderPass = m_render_pass;
+		render_pass_info.framebuffer = m_swapchain_framebuffers[i];
+		render_pass_info.renderArea.offset = {0, 0};
+		render_pass_info.renderArea.extent = m_swapchain_extent;
+		VkClearValue clear_color = {0.f, 0.f, 0.f, 1.f};
+		render_pass_info.clearValueCount = 1;
+		render_pass_info.pClearValues = &clear_color;
+
+		vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
+
+		vkCmdDraw(command_buffer, 3, 1, 0, 0);
+
+		vkCmdEndRenderPass(command_buffer);
+
+		if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+			FATAL_LOG("Failed to record command buffer!");
+			return false;
+		}
+	}
+
+	VERBOSE_LOG("created command buffers");
+	return true;
+}
+
+bool vk_framework::create_semaphores() {
+	VkSemaphoreCreateInfo semaphore_info = {};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphore) != VK_SUCCESS) {
+		FATAL_LOG("Failed to create semaphores!");
+		return false;
+	}
+
+	VERBOSE_LOG("created semaphores");
+	return true;
+}
+
 void vk_framework::destroy() {
+	vkDeviceWaitIdle(m_device);
+
+	vkDestroySemaphore(m_device, m_image_available_semaphore, nullptr);
+	vkDestroySemaphore(m_device, m_render_finished_semaphore, nullptr);
+
+	vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+
 	for (auto framebuffer : m_swapchain_framebuffers) vkDestroyFramebuffer(m_device, framebuffer, nullptr);
 
 	vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
@@ -665,6 +769,45 @@ void vk_framework::destroy() {
 	}
 
 	vkDestroyInstance(m_vk_instance, nullptr);
+}
+
+void vk_framework::draw_frame() {
+	uint32_t image_index;
+	vkAcquireNextImageKHR(m_device,
+						  m_swapchain,
+						  std::numeric_limits<uint64_t>::max(),
+						  m_image_available_semaphore,
+						  VK_NULL_HANDLE,
+						  &image_index);
+
+	VkSemaphore wait_semaphores[] = {m_image_available_semaphore};
+	VkSemaphore signal_semaphores[] = {m_render_finished_semaphore};
+	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = wait_semaphores;
+	submit_info.pWaitDstStageMask = wait_stages;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &m_command_buffers[image_index];
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = signal_semaphores;
+
+	if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) {
+		FATAL_LOG("Failed to submit draw command buffer!");
+	}
+
+	VkSwapchainKHR swapchains[] = {m_swapchain};
+	VkPresentInfoKHR present_info = {};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = signal_semaphores;
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = swapchains;
+	present_info.pImageIndices = &image_index;
+
+	vkQueuePresentKHR(m_graphics_queue, &present_info);
 }
 
 bool vk_framework::check_validation_layer_support() {

@@ -27,11 +27,14 @@ bool supernova::init() {
 void supernova::main_loop() {
 	while (!m_window.should_close()) {
 		glfwPollEvents();
+		draw_frame();
 	}
 }
 void supernova::destroy() {
 	m_vk_framework.destroy();
 	m_window.destroy();
 }
+
+void supernova::draw_frame() { m_vk_framework.draw_frame(); }
 
 }  // namespace snova
