@@ -17,6 +17,12 @@ struct queue_family_indices {
 	}
 };
 
+struct swapchain_support_details {
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> surface_formats;
+	std::vector<VkPresentModeKHR> present_modes;
+};
+
 class vk_framework {
 public:
 	vk_framework();
@@ -39,11 +45,19 @@ private:
 
 	bool create_logical_device();
 
+	bool create_swapchain();
+	swapchain_support_details query_swapchain_support(VkPhysicalDevice device);
+	VkSurfaceFormatKHR choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
+	VkPresentModeKHR choose_swap_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
+	VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 					VkDebugUtilsMessageTypeFlagsEXT message_type,
 					const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
 					void* p_user_data);
+
+bool check_device_extension_support(VkPhysicalDevice device);
 
 private:
 	bool check_validation_layer_support();
@@ -56,5 +70,9 @@ private:
 	VkQueue m_graphics_queue;
 	VkQueue m_present_queue;
 	VkSurfaceKHR m_surface;
+	VkSwapchainKHR m_swapchain;
+	std::vector<VkImage> m_swapchain_images;
+	VkFormat m_swapchain_image_format;
+	VkExtent2D m_swapchain_extent;
 };
 }  // namespace snova

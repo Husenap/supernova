@@ -7,7 +7,7 @@ bool window::init() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	m_window_handle = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+	m_window_handle = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan window", nullptr, nullptr);
 
 	if (!m_window_handle) {
 		FATAL_LOG("glfwCreateWindow returned null window handler!");
