@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <fstream>
 
 #include <logger.h>
 

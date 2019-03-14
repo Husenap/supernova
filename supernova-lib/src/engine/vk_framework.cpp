@@ -25,6 +25,7 @@ bool vk_framework::init(const snova::window& window) {
 	if (!create_logical_device()) return false;
 	if (!create_swapchain()) return false;
 	if (!create_image_views()) return false;
+	if (!create_graphics_pipeline()) return false;
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -430,6 +431,66 @@ bool vk_framework::create_image_views() {
 
 	VERBOSE_LOG("Created image views");
 	return true;
+}
+
+static std::vector<char> read_file(const std::string& filename) {
+	std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+	if (!file.is_open()) {
+		FATAL_LOG("Failed to open file");
+	}
+
+	size_t file_size = (size_t)file.tellg();
+	std::vector<char> buffer(file_size);
+
+	file.seekg(0);
+	file.read(buffer.data(), file_size);
+
+	file.close();
+
+	return buffer;
+}
+bool vk_framework::create_graphics_pipeline() {
+	auto vert_shader_code = read_file("assets/shaders/simple.vert.spv");
+	auto frag_shader_code = read_file("assets/shaders/simple.frag.spv");
+
+	VkShaderModule vert_shader_module = create_shader_module(vert_shader_code);
+	VkShaderModule frag_shader_module = create_shader_module(frag_shader_code);
+
+	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
+	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vert_shader_stage_info.module = vert_shader_module;
+	vert_shader_stage_info.pName = "main";
+
+	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
+	frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	frag_shader_stage_info.module = frag_shader_module;
+	frag_shader_stage_info.pName = "main";
+
+	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
+
+
+	vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
+	vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
+
+	VERBOSE_LOG("Created graphics pipeline");
+	return true;
+}
+
+VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code) {
+	VkShaderModuleCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.codeSize = code.size();
+	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+	VkShaderModule shader_module;
+	if (vkCreateShaderModule(m_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+		FATAL_LOG("Failed to create shader module");
+	}
+
+	return shader_module;
 }
 
 void vk_framework::destroy() {
