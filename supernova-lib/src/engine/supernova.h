@@ -1,6 +1,5 @@
 #pragma once
 
-#include "window.h"
 #include "vk_framework.h"
 
 namespace snova {
@@ -20,7 +19,6 @@ private:
 
 	void draw_frame();
 
-	window m_window;
 	vk_framework m_vk_framework;
 };
 }  // namespace snova

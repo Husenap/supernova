@@ -4,7 +4,9 @@ set(src_include
 	)
 
 set(src_include
-	"include/logger.h")
+	"include/logger.h"
+	"include/singleton.h"
+	)
 
 set(src_utils
 	"src/logger.cpp")

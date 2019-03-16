@@ -2,6 +2,8 @@
 
 #include "../precompiled.h"
 
+#include "window.h"
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -17,10 +19,10 @@ vk_framework::vk_framework()
 
 vk_framework::~vk_framework() {}
 
-bool vk_framework::init(const snova::window& window) {
+bool vk_framework::init() {
 	if (!create_vk_instance()) return false;
 	if (enable_validation_layers && !setup_debug_messenger()) return false;
-	if (!create_surface(window)) return false;
+	if (!create_surface()) return false;
 	if (!pick_physical_device()) return false;
 	if (!create_logical_device()) return false;
 	if (!create_swapchain()) return false;
@@ -30,7 +32,9 @@ bool vk_framework::init(const snova::window& window) {
 	if (!create_frame_buffers()) return false;
 	if (!create_command_pool()) return false;
 	if (!create_command_buffers()) return false;
-	if (!create_semaphores()) return false;
+	if (!create_sync_objects()) return false;
+
+	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -118,8 +122,8 @@ bool vk_framework::setup_debug_messenger() {
 	return true;
 }
 
-bool vk_framework::create_surface(const snova::window& window) {
-	if (glfwCreateWindowSurface(m_vk_instance, window.get_window_handle(), nullptr, &m_surface) !=
+bool vk_framework::create_surface() {
+	if (glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface) !=
 		VK_SUCCESS) {
 		FATAL_LOG("Failed to create window surface");
 		return false;
@@ -396,8 +400,8 @@ VkExtent2D vk_framework::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
-		// Todo: Get this from settings
-		VkExtent2D actual_extent = {WIDTH, HEIGHT};
+		auto size = window::get_window_size();
+		VkExtent2D actual_extent = {static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y)};
 
 		actual_extent.width = std::max(capabilities.minImageExtent.width,
 									   std::min(capabilities.maxImageExtent.width, actual_extent.width));
@@ -730,58 +734,99 @@ bool vk_framework::create_command_buffers() {
 	return true;
 }
 
-bool vk_framework::create_semaphores() {
+bool vk_framework::create_sync_objects() {
+	m_image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	m_in_flight_fences.resize(MAX_FRAMES_IN_FLIGHT);
+
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphore) != VK_SUCCESS) {
-		FATAL_LOG("Failed to create semaphores!");
-		return false;
+	VkFenceCreateInfo fence_info = {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+		if (vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_image_available_semaphores[i]) !=
+				VK_SUCCESS ||
+			vkCreateSemaphore(m_device, &semaphore_info, nullptr, &m_render_finished_semaphores[i]) !=
+				VK_SUCCESS ||
+			vkCreateFence(m_device, &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
+			FATAL_LOG("Failed to create sync objects for a frame!");
+			return false;
+		}
 	}
 
-	VERBOSE_LOG("created semaphores");
+	VERBOSE_LOG("created sync objects");
+	return true;
+}
+
+bool vk_framework::recreate_swapchain() {
+	glm::ivec2 window_size(0);
+	while (window_size.x == 0 || window_size.y == 0) {
+		window_size = window::get_window_size();
+		glfwWaitEvents();
+	}
+
+	vkDeviceWaitIdle(m_device);
+
+	destroy_swapchain();
+
+	if (!create_swapchain()) return false;
+	if (!create_image_views()) return false;
+	if (!create_render_pass()) return false;
+	if (!create_graphics_pipeline()) return false;
+	if (!create_frame_buffers()) return false;
+	if (!create_command_buffers()) return false;
+
+	VERBOSE_LOG("recreated swapchain");
 	return true;
 }
 
 void vk_framework::destroy() {
 	vkDeviceWaitIdle(m_device);
 
-	vkDestroySemaphore(m_device, m_image_available_semaphore, nullptr);
-	vkDestroySemaphore(m_device, m_render_finished_semaphore, nullptr);
+	destroy_swapchain();
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
+		vkDestroySemaphore(m_device, m_render_finished_semaphores[i], nullptr);
+		vkDestroyFence(m_device, m_in_flight_fences[i], nullptr);
+	}
 
 	vkDestroyCommandPool(m_device, m_command_pool, nullptr);
 
-	for (auto framebuffer : m_swapchain_framebuffers) vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-
-	vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
-	vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
-	vkDestroyRenderPass(m_device, m_render_pass, nullptr);
-
-	for (auto image_view : m_swapchain_image_views) vkDestroyImageView(m_device, image_view, nullptr);
-
-	vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 	vkDestroyDevice(m_device, nullptr);
-	vkDestroySurfaceKHR(m_vk_instance, m_surface, nullptr);
 
 	if (enable_validation_layers) {
 		destroy_debug_utils_messenger_ext(m_vk_instance, m_debug_messenger, nullptr);
 	}
 
+	vkDestroySurfaceKHR(m_vk_instance, m_surface, nullptr);
 	vkDestroyInstance(m_vk_instance, nullptr);
 }
 
 void vk_framework::draw_frame() {
-	uint32_t image_index;
-	vkAcquireNextImageKHR(m_device,
-						  m_swapchain,
-						  std::numeric_limits<uint64_t>::max(),
-						  m_image_available_semaphore,
-						  VK_NULL_HANDLE,
-						  &image_index);
+	vkWaitForFences(
+		m_device, 1, &m_in_flight_fences[m_current_frame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
-	VkSemaphore wait_semaphores[] = {m_image_available_semaphore};
-	VkSemaphore signal_semaphores[] = {m_render_finished_semaphore};
+	uint32_t image_index;
+	VkResult result = vkAcquireNextImageKHR(m_device,
+											m_swapchain,
+											std::numeric_limits<uint64_t>::max(),
+											m_image_available_semaphores[m_current_frame],
+											VK_NULL_HANDLE,
+											&image_index);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+		recreate_swapchain();
+		return;
+	} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+		FATAL_LOG("Failed to acquire swap chain image!");
+	}
+
+	VkSemaphore wait_semaphores[] = {m_image_available_semaphores[m_current_frame]};
+	VkSemaphore signal_semaphores[] = {m_render_finished_semaphores[m_current_frame]};
 	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
 	VkSubmitInfo submit_info = {};
@@ -794,7 +839,9 @@ void vk_framework::draw_frame() {
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = signal_semaphores;
 
-	if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS) {
+	vkResetFences(m_device, 1, &m_in_flight_fences[m_current_frame]);
+
+	if (vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_in_flight_fences[m_current_frame]) != VK_SUCCESS) {
 		FATAL_LOG("Failed to submit draw command buffer!");
 	}
 
@@ -807,7 +854,31 @@ void vk_framework::draw_frame() {
 	present_info.pSwapchains = swapchains;
 	present_info.pImageIndices = &image_index;
 
-	vkQueuePresentKHR(m_graphics_queue, &present_info);
+	result = vkQueuePresentKHR(m_graphics_queue, &present_info);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebuffer_resized) {
+		m_framebuffer_resized = false;
+		recreate_swapchain();
+	} else if (result != VK_SUCCESS) {
+		FATAL_LOG("Failed to present swap chain image!");
+	}
+
+	m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void vk_framework::destroy_swapchain() {
+	for (auto framebuffer : m_swapchain_framebuffers) vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+
+	vkFreeCommandBuffers(
+		m_device, m_command_pool, static_cast<uint32_t>(m_command_buffers.size()), m_command_buffers.data());
+
+	vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+	vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+
+	for (auto image_view : m_swapchain_image_views) vkDestroyImageView(m_device, image_view, nullptr);
+
+	vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 }
 
 bool vk_framework::check_validation_layer_support() {
@@ -844,9 +915,9 @@ std::vector<const char*> vk_framework::get_requried_extensions() {
 
 VKAPI_ATTR VkBool32 VKAPI_CALL
 vk_framework::vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-							  VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
-							  const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-							  void* /*p_user_data*/) {
+							  [[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
+							  [[maybe_unused]] const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+							  [[maybe_unused]] void* p_user_data) {
 	switch (message_severity) {
 		/*
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:

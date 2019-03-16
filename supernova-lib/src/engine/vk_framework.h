@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "window.h"
-
 #include <optional>
 #include <vector>
 
@@ -28,7 +26,7 @@ public:
 	vk_framework();
 	~vk_framework();
 
-	bool init(const snova::window& window);
+	bool init();
 
 	void destroy();
 
@@ -39,11 +37,12 @@ private:
 
 	bool setup_debug_messenger();
 
-	bool create_surface(const snova::window& window);
+	bool create_surface();
 
 	bool pick_physical_device();
 	int rate_device_suitability(VkPhysicalDevice device);
 	queue_family_indices find_queue_families(VkPhysicalDevice device);
+	bool check_device_extension_support(VkPhysicalDevice device);
 
 	bool create_logical_device();
 
@@ -66,20 +65,22 @@ private:
 
 	bool create_command_buffers();
 
-	bool create_semaphores();
+	bool create_sync_objects();
+
+	bool recreate_swapchain();
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL
 	vlayer_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-					VkDebugUtilsMessageTypeFlagsEXT message_type,
-					const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-					void* p_user_data);
+					[[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
+					[[maybe_unused]] const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+					[[maybe_unused]] void* p_user_data);
 
-bool check_device_extension_support(VkPhysicalDevice device);
+	void destroy_swapchain();
 
-private:
 	bool check_validation_layer_support();
 	std::vector<const char*> get_requried_extensions();
 
+private:
 	VkInstance m_vk_instance;
 	VkDebugUtilsMessengerEXT m_debug_messenger;
 	VkPhysicalDevice m_physical_device;
@@ -98,7 +99,12 @@ private:
 	VkPipeline m_graphics_pipeline;
 	VkCommandPool m_command_pool;
 	std::vector<VkCommandBuffer> m_command_buffers;
-	VkSemaphore m_image_available_semaphore;
-	VkSemaphore m_render_finished_semaphore;
+
+	std::vector<VkSemaphore> m_image_available_semaphores;
+	std::vector<VkSemaphore> m_render_finished_semaphores;
+	std::vector<VkFence> m_in_flight_fences;
+	int m_current_frame = 0;
+
+	bool m_framebuffer_resized = false;
 };
 }  // namespace snova

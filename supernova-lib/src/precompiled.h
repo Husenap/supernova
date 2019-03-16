@@ -15,4 +15,5 @@ namespace {
 // Todo: Replace these with settings
 const int WIDTH = 800;
 const int HEIGHT = 600;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 }  // namespace
