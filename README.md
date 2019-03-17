@@ -1,7 +1,4 @@
 # supernova
 
-## Vulkan
+A demoscene framework using vulkan developed by me.
 
-### Wow!
-
-#### :o
