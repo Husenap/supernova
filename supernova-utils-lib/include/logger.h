@@ -18,6 +18,14 @@ namespace snova
 			Count
 		};
 
+		static constexpr int message_color_index	= 1;
+		static constexpr int file_color_index		= 2;
+		static constexpr int info_color_index		= 3;
+		static constexpr int verbose_color_index	= 4;
+		static constexpr int warning_color_index	= 5;
+		static constexpr int error_color_index		= 6;
+		static constexpr int fatal_color_index		= 7;
+
 	public:
 		static logger& get() {
 			static logger our_logger;
@@ -28,7 +36,7 @@ namespace snova
 		void set_level(level log_level) { m_level = log_level; }
 
 	private:
-		logger(){}
+		logger();
 		~logger(){} 
 
 		level m_level = All;

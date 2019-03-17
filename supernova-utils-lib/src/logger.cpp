@@ -6,9 +6,14 @@
 #include <functional>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace snova {
 
-static const char* const level_strings[logger::level::Count + 1] = { "", "---Info", "Verbose", "Warning", "--Error", "--Fatal", ""};
+static const char* const level_strings[logger::level::Count + 1] = {
+	"", "---Info", "Verbose", "Warning", "--Error", "--Fatal", ""};
 
 void logger::log(
 	level log_level, const char* file, long line, const char* function_name, const char* format_string, ...) {
@@ -44,12 +49,46 @@ void logger::log(
 			  file_name.c_str(),
 			  line,
 			  buffer1);
-
+#ifdef _WIN32
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, int(log_level) + 2);
+	printf("[%s]", level_strings[log_level]);
+	SetConsoleTextAttribute(hConsole, file_color_index);
+	printf("%s(%s:%li): ", short_function_name.c_str(), file_name.c_str(), line);
+	SetConsoleTextAttribute(hConsole, message_color_index);
+	printf("%s\n", buffer1);
+#else
 	printf("%s", buffer2);
+#endif
+
 
 	if (log_level == Fatal) {
 		throw std::runtime_error(buffer2);
 	}
+}
+logger::logger() {
+#ifdef _WIN32
+	HWND hwnd = GetConsoleWindow();
+
+	SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+	SetLayeredWindowAttributes(hwnd, 0, 245, LWA_ALPHA);
+
+	auto console = GetStdHandle(STD_OUTPUT_HANDLE);
+	_CONSOLE_SCREEN_BUFFER_INFOEX csbi;
+	csbi.cbSize = sizeof(_CONSOLE_SCREEN_BUFFER_INFOEX);
+	GetConsoleScreenBufferInfoEx(console, &csbi);
+
+	csbi.ColorTable[0] = 0x362a28;
+	csbi.ColorTable[message_color_index] = 0xf0f1f1;
+	csbi.ColorTable[file_color_index] = 0x8ef75a;
+	csbi.ColorTable[info_color_index] = 0xfeed9a;
+	csbi.ColorTable[verbose_color_index] = 0xffc757;
+	csbi.ColorTable[warning_color_index] = 0x9df9f3;
+	csbi.ColorTable[error_color_index] = 0xc16aff;
+	csbi.ColorTable[fatal_color_index] = 0x575cff;
+	csbi.cbSize = sizeof(csbi);
+	SetConsoleScreenBufferInfoEx(console, &csbi);
+#endif
 }
 }  // namespace snova
 
