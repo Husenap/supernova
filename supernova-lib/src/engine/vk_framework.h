@@ -56,11 +56,17 @@ struct vertex_data {
 };
 
 const std::vector<vertex_data> vertices = {{{-0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},
-										   {{+0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-										   {{+0.5f, +0.5f}, {0.0f, 1.0f, 1.0f}},
-										   {{-0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}}};
+										   {{+0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
+										   {{+0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}},
+										   {{-0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
+const std::vector<uint16_t> indices = {0, 2, 1, 2, 0, 3};
+
+struct uniform_buffer_object {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+};
 
 class vk_framework : public singleton<vk_framework> {
 public:
@@ -102,6 +108,8 @@ private:
 
 	bool create_render_pass();
 
+	bool create_descriptor_set_layout();
+
 	bool create_graphics_pipeline();
 	VkShaderModule create_shader_module(const std::vector<char>& code);
 
@@ -111,6 +119,9 @@ private:
 
 	bool create_vertex_buffer();
 	bool create_index_buffer();
+	bool create_uniform_buffers();
+	bool create_descriptor_pool();
+	bool create_descriptor_sets();
 
 	bool create_command_buffers();
 
@@ -125,6 +136,8 @@ private:
 					[[maybe_unused]] void* p_user_data);
 
 	void destroy_swapchain();
+
+	void update_uniform_buffer(uint32_t current_image);
 
 	bool check_validation_layer_support();
 	std::vector<const char*> get_requried_extensions();
@@ -143,6 +156,7 @@ private:
 	std::vector<VkImage> m_swapchain_images;
 	std::vector<VkImageView> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
+	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkPipelineLayout m_pipeline_layout;
 	VkRenderPass m_render_pass;
 	VkPipeline m_graphics_pipeline;
@@ -151,6 +165,10 @@ private:
 
 	vk_buffer m_vertex_buffer;
 	vk_buffer m_index_buffer;
+	std::vector<vk_buffer> m_uniform_buffers;
+
+	VkDescriptorPool m_descriptor_pool;
+	std::vector<VkDescriptorSet> m_descriptor_sets;
 
 	std::vector<VkSemaphore> m_image_available_semaphores;
 	std::vector<VkSemaphore> m_render_finished_semaphores;

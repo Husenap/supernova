@@ -26,7 +26,8 @@ if (MSVC)
         /w14928					# illegal copy-initialization; more than one user-defined conversion has been implicitly applied
 
 		# suppressed warnings
-        /wd4201)				# nonstandard extension used : nameless struct/union
+        /wd4201					# nonstandard extension used : nameless struct/union
+        /wd4127)				# conditional expression is constant
 else()
     target_compile_options(compiler-warnings INTERFACE
         -Wall                   # reasonable and standard
