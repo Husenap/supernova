@@ -6,6 +6,7 @@
 #include <glm/vec4.hpp>
 
 #include "window.h"
+#include "vk_framework.h"
 
 namespace snova {
 void supernova::run() {
@@ -20,7 +21,7 @@ bool supernova::init() {
 		return false;
 	}
 
-	if (!m_vk_framework.init()) {
+	if (!vk_framework::get().init()) {
 		return false;
 	}
 
@@ -33,10 +34,10 @@ void supernova::main_loop() {
 	}
 }
 void supernova::destroy() {
-	m_vk_framework.destroy();
+	vk_framework::get().destroy();
 	window::destroy();
 }
 
-void supernova::draw_frame() { m_vk_framework.draw_frame(); }
+void supernova::draw_frame() { vk_framework::get().draw_frame(); }
 
 }  // namespace snova

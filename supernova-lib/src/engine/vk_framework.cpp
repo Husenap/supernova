@@ -31,6 +31,8 @@ bool vk_framework::init() {
 	if (!create_graphics_pipeline()) return false;
 	if (!create_frame_buffers()) return false;
 	if (!create_command_pool()) return false;
+	if (!create_vertex_buffer()) return false;
+	if (!create_index_buffer()) return false;
 	if (!create_command_buffers()) return false;
 	if (!create_sync_objects()) return false;
 
@@ -212,36 +214,36 @@ bool vk_framework::check_device_extension_support(VkPhysicalDevice device) {
 }
 
 queue_family_indices vk_framework::find_queue_families(VkPhysicalDevice device) {
-	queue_family_indices indices;
+	queue_family_indices family_indices;
 
 	uint32_t queue_family_count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
 	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
 
-	for (uint32_t i = 0; !indices.is_complete() && i < queue_family_count; ++i) {
+	for (uint32_t i = 0; !family_indices.is_complete() && i < queue_family_count; ++i) {
 		const auto& queue_family = queue_families[i];
 
 		if (queue_family.queueCount > 0 && queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.m_graphics_family = i;
+			family_indices.m_graphics_family = i;
 		}
 
 		VkBool32 present_support = false;
 		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &present_support);
 		if (queue_family.queueCount > 0 && present_support) {
-			indices.m_present_family = i;
+			family_indices.m_present_family = i;
 		}
 	}
 
-	return indices;
+	return family_indices;
 }
 
 bool vk_framework::create_logical_device() {
-	queue_family_indices indices = find_queue_families(m_physical_device);
+	queue_family_indices family_indices = find_queue_families(m_physical_device);
 
 	std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-	std::set<uint32_t> unique_queue_families = {indices.m_graphics_family.value(),
-												indices.m_present_family.value()};
+	std::set<uint32_t> unique_queue_families = {family_indices.m_graphics_family.value(),
+												family_indices.m_present_family.value()};
 
 	float queue_priority = 1.0f;
 	for (uint32_t queue_family : unique_queue_families) {
@@ -276,8 +278,8 @@ bool vk_framework::create_logical_device() {
 		return false;
 	}
 
-	vkGetDeviceQueue(m_device, indices.m_graphics_family.value(), 0, &m_graphics_queue);
-	vkGetDeviceQueue(m_device, indices.m_present_family.value(), 0, &m_present_queue);
+	vkGetDeviceQueue(m_device, family_indices.m_graphics_family.value(), 0, &m_graphics_queue);
+	vkGetDeviceQueue(m_device, family_indices.m_present_family.value(), 0, &m_present_queue);
 
 	VERBOSE_LOG("Created logical device");
 	return true;
@@ -306,10 +308,10 @@ bool vk_framework::create_swapchain() {
 	create_info.imageArrayLayers = 1;
 	create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	queue_family_indices indices = find_queue_families(m_physical_device);
-	uint32_t unique_queue_families[] = {indices.m_graphics_family.value(), indices.m_present_family.value()};
+	queue_family_indices family_indices = find_queue_families(m_physical_device);
+	uint32_t unique_queue_families[] = {family_indices.m_graphics_family.value(), family_indices.m_present_family.value()};
 
-	if (indices.m_graphics_family != indices.m_present_family) {
+	if (family_indices.m_graphics_family != family_indices.m_present_family) {
 		create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		create_info.queueFamilyIndexCount = 2;
 		create_info.pQueueFamilyIndices = unique_queue_families;
@@ -526,12 +528,15 @@ bool vk_framework::create_graphics_pipeline() {
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
+	auto binding_description = vertex_data::get_binding_description();
+	auto attribute_descriptions = vertex_data::get_attribute_descriptions();
+
 	VkPipelineVertexInputStateCreateInfo vertex_input_state = {};
 	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_state.vertexBindingDescriptionCount = 0;
-	vertex_input_state.pVertexBindingDescriptions = nullptr;
-	vertex_input_state.vertexAttributeDescriptionCount = 0;
-	vertex_input_state.pVertexAttributeDescriptions = nullptr;
+	vertex_input_state.vertexBindingDescriptionCount = 1;
+	vertex_input_state.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
+	vertex_input_state.pVertexBindingDescriptions = &binding_description;
+	vertex_input_state.pVertexAttributeDescriptions = attribute_descriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {};
 	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -680,6 +685,62 @@ bool vk_framework::create_command_pool() {
 	return true;
 }
 
+bool vk_framework::create_vertex_buffer() {
+	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+
+	vk_buffer staging_buffer;
+	if (!staging_buffer.init(buffer_size,
+							 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+		FATAL_LOG("Failed to create staging buffer!");
+		return false;
+	}
+
+	staging_buffer.set_data(vertices.data());
+
+	if (!m_vertex_buffer.init(buffer_size,
+							  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+							  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+		FATAL_LOG("Failed to create vertex buffer!");
+		return false;
+	}
+
+	m_vertex_buffer.copy_data_from(staging_buffer);
+
+	staging_buffer.destroy();
+
+	VERBOSE_LOG("Created vertex buffer");
+	return true;
+}
+
+bool vk_framework::create_index_buffer() {
+	VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+
+	vk_buffer staging_buffer;
+	if (!staging_buffer.init(buffer_size,
+							 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+		FATAL_LOG("Failed to create staging buffer!");
+		return false;
+	}
+
+	staging_buffer.set_data(indices.data());
+
+	if (!m_index_buffer.init(buffer_size,
+							  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+							  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+		FATAL_LOG("Failed to create vertex buffer!");
+		return false;
+	}
+
+	m_index_buffer.copy_data_from(staging_buffer);
+
+	staging_buffer.destroy();
+
+	VERBOSE_LOG("Created index buffer");
+	return true;
+}
+
 bool vk_framework::create_command_buffers() {
 	m_command_buffers.resize(m_swapchain_framebuffers.size());
 
@@ -720,7 +781,11 @@ bool vk_framework::create_command_buffers() {
 
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
-		vkCmdDraw(command_buffer, 3, 1, 0, 0);
+		VkDeviceSize offsets[] = {0};
+		vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_vertex_buffer.get_buffer(), offsets);
+		vkCmdBindIndexBuffer(command_buffer, m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(command_buffer);
 
@@ -787,6 +852,9 @@ void vk_framework::destroy() {
 	vkDeviceWaitIdle(m_device);
 
 	destroy_swapchain();
+
+	m_index_buffer.destroy();
+	m_vertex_buffer.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);

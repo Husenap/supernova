@@ -1,14 +1,10 @@
 #pragma once
 
-#include "vk_framework.h"
-
 namespace snova {
 class supernova {
 public:
-	supernova() {
-	}
-	~supernova() {
-	}
+	supernova() {}
+	~supernova() {}
 
 	void run();
 
@@ -18,7 +14,5 @@ private:
 	void destroy();
 
 	void draw_frame();
-
-	vk_framework m_vk_framework;
 };
 }  // namespace snova
