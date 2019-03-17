@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 2.8.2)
+
+project(cotire-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(
+	cotire
+	URL					https://github.com/sakra/cotire/archive/cotire-1.8.0.zip
+	TIMEOUT				10
+	SOURCE_DIR			"${PROJECT_BINARY_DIR}/third_party/cotire/src"
+	BINARY_DIR			"${PROJECT_BINARY_DIR}/third_party/cotire/build"
+	CONFIGURE_COMMAND	""
+	BUILD_COMMAND		""
+	INSTALL_COMMAND		""
+	TEST_COMMAND		""
+	LOG_DOWNLOAD		ON
+	LOG_CONFIGURE		ON
+	LOG_BUILD			ON
+)

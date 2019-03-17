@@ -35,6 +35,7 @@ set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${target_name} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON)
+set_target_properties(${target_name} PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT ${src_precompiled})
 
 target_link_libraries(${target_name} PUBLIC
 	${gfx_libraries}
@@ -46,3 +47,5 @@ target_include_directories(${target_name} PUBLIC
 	${gfx_includes})
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)
+
+cotire(${target_name})
