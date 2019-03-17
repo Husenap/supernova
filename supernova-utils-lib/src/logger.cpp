@@ -24,7 +24,7 @@ void logger::log(
 	va_list args;
 	va_start(args, format_string);
 	vsprintf_s(buffer1, format_string, args);
-	// perror(buffer1);
+	//perror(buffer1);
 	va_end(args);
 
 	std::string file_name = std::filesystem::path(file).filename().string();
@@ -77,6 +77,8 @@ logger::logger() {
 	csbi.cbSize = sizeof(_CONSOLE_SCREEN_BUFFER_INFOEX);
 	GetConsoleScreenBufferInfoEx(console, &csbi);
 
+	// Snazzy
+	/*
 	csbi.ColorTable[0] = 0x362a28;
 	csbi.ColorTable[message_color_index] = 0xf0f1f1;
 	csbi.ColorTable[file_color_index] = 0x8ef75a;
@@ -85,7 +87,17 @@ logger::logger() {
 	csbi.ColorTable[warning_color_index] = 0x9df9f3;
 	csbi.ColorTable[error_color_index] = 0xc16aff;
 	csbi.ColorTable[fatal_color_index] = 0x575cff;
-	csbi.cbSize = sizeof(csbi);
+	*/
+	// gruvbox
+	csbi.ColorTable[0] = 0x282828;
+	csbi.ColorTable[message_color_index] = 0xb4daeb;
+	csbi.ColorTable[file_color_index] = 0x758392;
+	csbi.ColorTable[info_color_index] = 0x98a584;
+	csbi.ColorTable[verbose_color_index] = 0x7fbf8f;
+	csbi.ColorTable[warning_color_index] = 0x41bcf9;
+	csbi.ColorTable[error_color_index] = 0x2d80fc;
+	csbi.ColorTable[fatal_color_index] = 0x3c4bf8;
+
 	SetConsoleScreenBufferInfoEx(console, &csbi);
 #endif
 }
