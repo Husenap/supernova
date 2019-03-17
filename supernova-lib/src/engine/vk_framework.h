@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 #include "vulkan/vk_buffer.h"
+#include "vulkan/vk_image.h"
 
 #include <array>
 #include <optional>
@@ -79,10 +79,10 @@ public:
 
 	void draw_frame();
 
-	static VkDevice& get_device() { return get().m_device; }
-	static VkPhysicalDevice& get_physical_device() { return get().m_physical_device; }
-	static VkCommandPool& get_command_pool() { return get().m_command_pool; }
-	static VkQueue get_graphics_queue() { return get().m_graphics_queue; }
+	inline static VkDevice& get_device() { return get().m_device; }
+	inline static VkPhysicalDevice& get_physical_device() { return get().m_physical_device; }
+	inline static VkCommandPool& get_command_pool() { return get().m_command_pool; }
+	inline static VkQueue get_graphics_queue() { return get().m_graphics_queue; }
 
 private:
 	bool create_vk_instance();
@@ -117,6 +117,7 @@ private:
 
 	bool create_command_pool();
 
+	bool create_texture_image();
 	bool create_vertex_buffer();
 	bool create_index_buffer();
 	bool create_uniform_buffers();
@@ -166,6 +167,8 @@ private:
 	vk_buffer m_vertex_buffer;
 	vk_buffer m_index_buffer;
 	std::vector<vk_buffer> m_uniform_buffers;
+
+	vk_image m_texture_image;
 
 	VkDescriptorPool m_descriptor_pool;
 	std::vector<VkDescriptorSet> m_descriptor_sets;

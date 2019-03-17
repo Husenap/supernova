@@ -15,6 +15,9 @@ set(src_engine
 	"src/engine/window.h")
 
 set(src_vulkan
+	"src/engine/vulkan/vk_mem_utils.h"
+	"src/engine/vulkan/vk_image.cpp"
+	"src/engine/vulkan/vk_image.h"
 	"src/engine/vulkan/vk_buffer.cpp"
 	"src/engine/vulkan/vk_buffer.h")
 

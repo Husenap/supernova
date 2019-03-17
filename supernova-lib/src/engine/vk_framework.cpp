@@ -32,6 +32,7 @@ bool vk_framework::init() {
 	if (!create_graphics_pipeline()) return false;
 	if (!create_frame_buffers()) return false;
 	if (!create_command_pool()) return false;
+	if (!create_texture_image()) return false;
 	if (!create_vertex_buffer()) return false;
 	if (!create_index_buffer()) return false;
 	if (!create_uniform_buffers()) return false;
@@ -714,25 +715,26 @@ bool vk_framework::create_command_pool() {
 	return true;
 }
 
+bool vk_framework::create_texture_image() {
+	m_texture_image.init("assets/textures/texture.jpg");
+
+	VERBOSE_LOG("Created texture image");
+	return true;
+}
+
 bool vk_framework::create_vertex_buffer() {
 	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
 
 	vk_buffer staging_buffer;
-	if (!staging_buffer.init(buffer_size,
-							 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-		FATAL_LOG("Failed to create staging buffer!");
-		return false;
-	}
+	staging_buffer.init(buffer_size,
+						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	staging_buffer.set_data(vertices.data());
 
-	if (!m_vertex_buffer.init(buffer_size,
-							  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-							  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-		FATAL_LOG("Failed to create vertex buffer!");
-		return false;
-	}
+	m_vertex_buffer.init(buffer_size,
+						 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+						 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	m_vertex_buffer.copy_data_from(staging_buffer);
 
@@ -746,21 +748,15 @@ bool vk_framework::create_index_buffer() {
 	VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
 
 	vk_buffer staging_buffer;
-	if (!staging_buffer.init(buffer_size,
-							 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
-		FATAL_LOG("Failed to create staging buffer!");
-		return false;
-	}
+	staging_buffer.init(buffer_size,
+						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	staging_buffer.set_data(indices.data());
 
-	if (!m_index_buffer.init(buffer_size,
-							 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-							 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-		FATAL_LOG("Failed to create vertex buffer!");
-		return false;
-	}
+	m_index_buffer.init(buffer_size,
+						VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+						VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	m_index_buffer.copy_data_from(staging_buffer);
 
@@ -964,10 +960,10 @@ void vk_framework::destroy() {
 	destroy_swapchain();
 
 	vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
-
 	vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
 	for (auto& uniform_buffer : m_uniform_buffers) uniform_buffer.destroy();
 
+	m_texture_image.destroy();
 	m_index_buffer.destroy();
 	m_vertex_buffer.destroy();
 

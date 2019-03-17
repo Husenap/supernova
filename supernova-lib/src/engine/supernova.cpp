@@ -8,6 +8,9 @@
 #include "window.h"
 #include "vk_framework.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 namespace snova {
 void supernova::run() {
 	if (init()) {

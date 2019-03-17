@@ -1,9 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
-#include "../../precompiled.h"
-
 namespace snova {
 class vk_buffer {
 public:
@@ -17,9 +13,6 @@ public:
 	void destroy();
 
 	const VkBuffer& get_buffer() const { return m_buffer; }
-
-private:
-	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 private:
 	VkBuffer m_buffer;

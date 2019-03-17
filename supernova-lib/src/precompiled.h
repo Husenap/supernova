@@ -15,9 +15,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <stb_image.h>
+
+
 namespace {
-// Todo: Replace these with settings
-const int WIDTH = 800;
-const int HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 }  // namespace
