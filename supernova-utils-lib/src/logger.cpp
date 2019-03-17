@@ -61,7 +61,6 @@ void logger::log(
 	printf("%s", buffer2);
 #endif
 
-
 	if (log_level == Fatal) {
 		throw std::runtime_error(buffer2);
 	}
