@@ -3,7 +3,7 @@
 namespace snova {
 class vk_image_view {
 public:
-	bool init(VkImage image, VkFormat format);
+	bool init(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
 
 	void destroy();
 

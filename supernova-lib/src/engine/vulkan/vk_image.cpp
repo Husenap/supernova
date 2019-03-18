@@ -4,38 +4,19 @@
 #include "vk_mem_utils.h"
 
 namespace snova {
-bool vk_image::init(const char* image_file) {
-	glm::ivec3 image_data;
-	stbi_uc* pixels = stbi_load(image_file, &image_data.x, &image_data.y, &image_data.z, STBI_rgb_alpha);
-
-	if (!pixels) {
-		FATAL_LOG("Failed to load texture image!");
-	}
-
-	m_dimensions = {image_data.x, image_data.y};
-	VkDeviceSize image_size = image_data.x * image_data.y * 4;
-
-	vk_buffer staging_buffer;
-	staging_buffer.init(image_size,
-						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	staging_buffer.set_data(pixels);
-
-	stbi_image_free(pixels);
-
+bool vk_image::init(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage) {
 	VkImageCreateInfo image_info = {};
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	image_info.imageType = VK_IMAGE_TYPE_2D;
-	image_info.extent.width = static_cast<uint32_t>(image_data.x);
-	image_info.extent.height = static_cast<uint32_t>(image_data.y);
+	image_info.extent.width = width;
+	image_info.extent.height = height;
 	image_info.extent.depth = 1;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
-	image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_info.format = format;
+	image_info.tiling = tiling;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	image_info.usage = usage;
 	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -59,6 +40,37 @@ bool vk_image::init(const char* image_file) {
 	}
 
 	vkBindImageMemory(vk_framework::get_device(), m_image, m_image_memory, 0);
+
+	m_format = format;
+
+	VERBOSE_LOG("Created VkImage");
+	return true;
+}
+bool vk_image::init_from_file(const char* image_file) {
+	glm::ivec3 image_data;
+	stbi_uc* pixels = stbi_load(image_file, &image_data.x, &image_data.y, &image_data.z, STBI_rgb_alpha);
+
+	if (!pixels) {
+		FATAL_LOG("Failed to load texture image!");
+	}
+
+	m_dimensions = {image_data.x, image_data.y};
+	VkDeviceSize image_size = image_data.x * image_data.y * 4;
+
+	vk_buffer staging_buffer;
+	staging_buffer.init(image_size,
+						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	staging_buffer.set_data(pixels);
+
+	stbi_image_free(pixels);
+
+	init(static_cast<uint32_t>(image_data.x),
+		 static_cast<uint32_t>(image_data.y),
+		 VK_FORMAT_R8G8B8A8_UNORM,
+		 VK_IMAGE_TILING_OPTIMAL,
+		 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 	transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	copy_buffer_to_image(staging_buffer);
@@ -85,11 +97,16 @@ void vk_image::transition_image_layout(VkImageLayout old_layout, VkImageLayout n
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = m_image;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
+
+	if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	} else {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
 
 	VkPipelineStageFlags source_stage = 0;
 	VkPipelineStageFlags destination_stage = 0;
@@ -107,6 +124,13 @@ void vk_image::transition_image_layout(VkImageLayout old_layout, VkImageLayout n
 
 		source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask =
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	} else {
 		FATAL_LOG("Unsupported layout transition!");
 	}

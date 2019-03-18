@@ -69,10 +69,10 @@ const std::vector<vertex_data> vertices = {
 	{{+0.5f, +0.0f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
 	{{-0.5f, +0.0f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
                
-	{{-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{+0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-	{{+0.5f, -0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	{{-0.5f, -0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+	{{-0.5f, +0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	{{+0.5f, +0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+	{{+0.5f, +0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, +0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
@@ -128,7 +128,7 @@ private:
 	bool create_graphics_pipeline();
 	VkShaderModule create_shader_module(const std::vector<char>& code);
 
-	bool create_frame_buffers();
+	bool create_framebuffers();
 
 	bool create_command_pool();
 

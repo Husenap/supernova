@@ -30,9 +30,9 @@ bool vk_framework::init() {
 	if (!create_render_pass()) return false;
 	if (!create_descriptor_set_layout()) return false;
 	if (!create_graphics_pipeline()) return false;
-	if (!create_frame_buffers()) return false;
 	if (!create_command_pool()) return false;
 	if (!create_depth_resources()) return false;
+	if (!create_framebuffers()) return false;
 	if (!create_texture_image()) return false;
 	if (!create_vertex_buffer()) return false;
 	if (!create_index_buffer()) return false;
@@ -425,7 +425,8 @@ bool vk_framework::create_image_views() {
 	m_swapchain_image_views.resize(m_swapchain_images.size());
 
 	for (size_t i = 0; i < m_swapchain_images.size(); ++i) {
-		m_swapchain_image_views[i].init(m_swapchain_images[i], m_swapchain_image_format);
+		m_swapchain_image_views[i].init(
+			m_swapchain_images[i], m_swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 
 	VERBOSE_LOG("Created image views");
@@ -442,15 +443,28 @@ bool vk_framework::create_render_pass() {
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription depth_attachment = {};
+	depth_attachment.format = VK_FORMAT_D32_SFLOAT;
+	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	VkAttachmentReference depth_attachment_ref = {};
+	depth_attachment_ref.attachment = 1;
+	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
+	subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
 	VkSubpassDependency dependency = {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -460,10 +474,12 @@ bool vk_framework::create_render_pass() {
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+	std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
+
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
+	render_pass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+	render_pass_info.pAttachments = attachments.data();
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
 	render_pass_info.dependencyCount = 1;
@@ -595,6 +611,14 @@ bool vk_framework::create_graphics_pipeline() {
 	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+	VkPipelineDepthStencilStateCreateInfo depth_stencil = {};
+	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depth_stencil.depthTestEnable = VK_TRUE;
+	depth_stencil.depthWriteEnable = VK_TRUE;
+	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+	depth_stencil.depthBoundsTestEnable = VK_FALSE;
+	depth_stencil.stencilTestEnable = VK_FALSE;
+
 	VkPipelineColorBlendAttachmentState color_blend_attachment = {};
 	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 											VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -631,6 +655,7 @@ bool vk_framework::create_graphics_pipeline() {
 	pipeline_info.pViewportState = &viewport_state;
 	pipeline_info.pRasterizationState = &rasterizer;
 	pipeline_info.pMultisampleState = &multisampling;
+	pipeline_info.pDepthStencilState = &depth_stencil;
 	pipeline_info.pColorBlendState = &color_blending;
 	pipeline_info.layout = m_pipeline_layout;
 	pipeline_info.renderPass = m_render_pass;
@@ -663,17 +688,18 @@ VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code)
 	return shader_module;
 }
 
-bool vk_framework::create_frame_buffers() {
+bool vk_framework::create_framebuffers() {
 	m_swapchain_framebuffers.resize(m_swapchain_image_views.size());
 
 	for (size_t i = 0; i < m_swapchain_image_views.size(); ++i) {
-		VkImageView attachments[] = {m_swapchain_image_views[i].get_image_view()};
+		std::array<VkImageView, 2> attachments = {m_swapchain_image_views[i].get_image_view(),
+												  m_depth_image_view.get_image_view()};
 
 		VkFramebufferCreateInfo framebuffer_info = {};
 		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebuffer_info.renderPass = m_render_pass;
-		framebuffer_info.attachmentCount = 1;
-		framebuffer_info.pAttachments = attachments;
+		framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebuffer_info.pAttachments = attachments.data();
 		framebuffer_info.width = m_swapchain_extent.width;
 		framebuffer_info.height = m_swapchain_extent.height;
 		framebuffer_info.layers = 1;
@@ -706,15 +732,25 @@ bool vk_framework::create_command_pool() {
 }
 
 bool vk_framework::create_depth_resources() {
-	//TODO: implement this
+	m_depth_image.init(m_swapchain_extent.width,
+					   m_swapchain_extent.height,
+					   VK_FORMAT_D32_SFLOAT,
+					   VK_IMAGE_TILING_OPTIMAL,
+					   VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+	m_depth_image.transition_image_layout(VK_IMAGE_LAYOUT_UNDEFINED,
+										  VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+	m_depth_image_view.init(m_depth_image.get_image(), m_depth_image.get_format(), VK_IMAGE_ASPECT_DEPTH_BIT);
 
 	VERBOSE_LOG("Created depth resources");
 	return true;
 }
 
 bool vk_framework::create_texture_image() {
-	m_texture_image.init("assets/textures/texture.jpg");
-	m_texture_image_view.init(m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM);
+	m_texture_image.init_from_file("assets/textures/texture.jpg");
+	m_texture_image_view.init(
+		m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 	m_texture_sampler.init(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	VERBOSE_LOG("Created texture image");
@@ -846,7 +882,8 @@ bool vk_framework::create_descriptor_sets() {
 		descriptor_writes[1].descriptorCount = 1;
 		descriptor_writes[1].pImageInfo = &image_info;
 
-		vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(
+			m_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
 	}
 
 	VERBOSE_LOG("Created descriptor sets");
@@ -879,15 +916,18 @@ bool vk_framework::create_command_buffers() {
 			return false;
 		}
 
+		std::array<VkClearValue, 2> clear_values = {};
+		clear_values[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+		clear_values[1].depthStencil = {1.0f, 0};
+
 		VkRenderPassBeginInfo render_pass_info = {};
 		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		render_pass_info.renderPass = m_render_pass;
 		render_pass_info.framebuffer = m_swapchain_framebuffers[i];
 		render_pass_info.renderArea.offset = {0, 0};
 		render_pass_info.renderArea.extent = m_swapchain_extent;
-		VkClearValue clear_color = {0.f, 0.f, 0.f, 1.f};
-		render_pass_info.clearValueCount = 1;
-		render_pass_info.pClearValues = &clear_color;
+		render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+		render_pass_info.pClearValues = clear_values.data();
 
 		vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -962,7 +1002,8 @@ bool vk_framework::recreate_swapchain() {
 	if (!create_image_views()) return false;
 	if (!create_render_pass()) return false;
 	if (!create_graphics_pipeline()) return false;
-	if (!create_frame_buffers()) return false;
+	if (!create_depth_resources()) return false;
+	if (!create_framebuffers()) return false;
 	if (!create_command_buffers()) return false;
 
 	VERBOSE_LOG("recreated swapchain");
@@ -1065,6 +1106,9 @@ void vk_framework::draw_frame() {
 }
 
 void vk_framework::destroy_swapchain() {
+	m_depth_image_view.destroy();
+	m_depth_image.destroy();
+
 	for (auto framebuffer : m_swapchain_framebuffers) vkDestroyFramebuffer(m_device, framebuffer, nullptr);
 
 	vkFreeCommandBuffers(
@@ -1121,7 +1165,7 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.view =
-		glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::lookAt(glm::vec3(1.0f, 1.0f + 0.5f * std::cosf(t), 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

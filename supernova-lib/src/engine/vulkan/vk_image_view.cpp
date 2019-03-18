@@ -5,13 +5,13 @@
 #include "../vk_framework.h"
 
 namespace snova {
-bool vk_image_view::init(VkImage image, VkFormat format) {
+bool vk_image_view::init(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags) {
 	VkImageViewCreateInfo view_info = {};
 	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	view_info.image = image;
 	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	view_info.format = format;
-	view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view_info.subresourceRange.aspectMask = aspect_flags;
 	view_info.subresourceRange.baseMipLevel = 0;
 	view_info.subresourceRange.levelCount = 1;
 	view_info.subresourceRange.baseArrayLayer = 0;
