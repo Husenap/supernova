@@ -28,7 +28,7 @@ struct swapchain_support_details {
 };
 
 struct vertex_data {
-	glm::vec2 pos;
+	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 tex_coord;
 
@@ -46,7 +46,7 @@ struct vertex_data {
 
 		attribute_descriptions[0].binding = 0;
 		attribute_descriptions[0].location = 0;
-		attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attribute_descriptions[0].offset = offsetof(vertex_data, pos);
 
 		attribute_descriptions[1].binding = 0;
@@ -63,12 +63,19 @@ struct vertex_data {
 	}
 };
 
-const std::vector<vertex_data> vertices = {{{-0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-										   {{+0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-										   {{+0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-										   {{-0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+const std::vector<vertex_data> vertices = {
+	{{-0.5f, +0.0f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	{{+0.5f, +0.0f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+	{{+0.5f, +0.0f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, +0.0f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+               
+	{{-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	{{+0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+	{{+0.5f, -0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, -0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+};
 
-const std::vector<uint16_t> indices = {0, 2, 1, 2, 0, 3};
+const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
 
 struct uniform_buffer_object {
 	glm::mat4 model;
@@ -125,6 +132,7 @@ private:
 
 	bool create_command_pool();
 
+	bool create_depth_resources();
 	bool create_texture_image();
 	bool create_vertex_buffer();
 	bool create_index_buffer();
@@ -179,6 +187,9 @@ private:
 	vk_image m_texture_image;
 	vk_image_view m_texture_image_view;
 	vk_sampler m_texture_sampler;
+
+	vk_image m_depth_image;
+	vk_image_view m_depth_image_view;
 
 	VkDescriptorPool m_descriptor_pool;
 	std::vector<VkDescriptorSet> m_descriptor_sets;

@@ -32,6 +32,7 @@ bool vk_framework::init() {
 	if (!create_graphics_pipeline()) return false;
 	if (!create_frame_buffers()) return false;
 	if (!create_command_pool()) return false;
+	if (!create_depth_resources()) return false;
 	if (!create_texture_image()) return false;
 	if (!create_vertex_buffer()) return false;
 	if (!create_index_buffer()) return false;
@@ -704,6 +705,13 @@ bool vk_framework::create_command_pool() {
 	return true;
 }
 
+bool vk_framework::create_depth_resources() {
+	//TODO: implement this
+
+	VERBOSE_LOG("Created depth resources");
+	return true;
+}
+
 bool vk_framework::create_texture_image() {
 	m_texture_image.init("assets/textures/texture.jpg");
 	m_texture_image_view.init(m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM);
@@ -1111,12 +1119,12 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.view =
-		glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
-		glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
+		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
 	ubo.proj[1][1] *= -1.0f;
 
 	m_uniform_buffers[current_image].set_data(&ubo);
