@@ -49,6 +49,9 @@ target_link_libraries(${target_name} PUBLIC
 	"compiler-warnings"
 	"supernova-utils-lib")
 
+target_link_libraries(${target_name} PUBLIC "tinyspline_static")
+target_link_libraries(${target_name} PUBLIC "tinysplinecpp_static")
+
 target_include_directories(${target_name} PUBLIC
 	"../supernova-utils-lib/include"
 	${gfx_includes})

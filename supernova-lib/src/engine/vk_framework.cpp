@@ -15,7 +15,8 @@ const bool enable_validation_layers = false;
 
 namespace snova {
 vk_framework::vk_framework()
-	: m_physical_device(VK_NULL_HANDLE) {}
+	: m_physical_device(VK_NULL_HANDLE)
+	, m_spline(2, 3, 3) {}
 
 vk_framework::~vk_framework() {}
 
@@ -44,6 +45,10 @@ bool vk_framework::init() {
 
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
 
+	auto ctrlp = m_spline.controlPoints();
+	ctrlp = {-1.f, 0.5f, -1.f, 0.f, 1.0f, 0.f, 1.f, 0.5f, -1.f, 0.f, 1.0f, 0.f};
+	m_spline.setControlPoints(ctrlp);
+
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
 }
@@ -56,7 +61,7 @@ bool vk_framework::create_vk_instance() {
 
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.pApplicationName = "Herro Triangor";
+	app_info.pApplicationName = "Supernova";
 	app_info.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
 	app_info.pEngineName = "SuperNova";
 	app_info.engineVersion = VK_MAKE_VERSION(0, 0, 1);
@@ -1164,8 +1169,12 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 	uniform_buffer_object ubo = {};
 
 	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.view =
-		glm::lookAt(glm::vec3(1.0f, 1.0f + 0.5f * std::cosf(t), 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	auto result = m_spline.eval(std::fmodf(t, 1.0f)).result();
+
+	ubo.view = glm::lookAt(glm::vec3(result[0], result[1], result[2]),
+						   glm::vec3(0.0f, 0.0f, 0.0f),
+						   glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

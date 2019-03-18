@@ -13,6 +13,8 @@
 
 #include "singleton.h"
 
+#include <tinysplinecpp.h>
+
 namespace snova {
 struct queue_family_indices {
 	std::optional<uint32_t> m_graphics_family;
@@ -200,5 +202,7 @@ private:
 	int m_current_frame = 0;
 
 	bool m_framebuffer_resized = false;
+
+	tinyspline::BSpline m_spline;
 };
 }  // namespace snova
