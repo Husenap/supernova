@@ -9,10 +9,12 @@ public:
 
 	void destroy();
 
+	const VkImage& get_image() const { return m_image; }
+
 private:
 	void transition_image_layout(VkImageLayout old_layout, VkImageLayout new_layout);
 
-void copy_buffer_to_image(const vk_buffer& staging_buffer);
+	void copy_buffer_to_image(const vk_buffer& staging_buffer);
 
 private:
 	VkImage m_image;

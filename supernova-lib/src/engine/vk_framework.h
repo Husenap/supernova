@@ -4,6 +4,8 @@
 
 #include "vulkan/vk_buffer.h"
 #include "vulkan/vk_image.h"
+#include "vulkan/vk_image_view.h"
+#include "vulkan/vk_sampler.h"
 
 #include <array>
 #include <optional>
@@ -28,6 +30,7 @@ struct swapchain_support_details {
 struct vertex_data {
 	glm::vec2 pos;
 	glm::vec3 color;
+	glm::vec2 tex_coord;
 
 	static VkVertexInputBindingDescription get_binding_description() {
 		VkVertexInputBindingDescription binding_description;
@@ -38,8 +41,8 @@ struct vertex_data {
 		return binding_description;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 2> get_attribute_descriptions() {
-		std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 3> get_attribute_descriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> attribute_descriptions = {};
 
 		attribute_descriptions[0].binding = 0;
 		attribute_descriptions[0].location = 0;
@@ -51,14 +54,19 @@ struct vertex_data {
 		attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attribute_descriptions[1].offset = offsetof(vertex_data, color);
 
+		attribute_descriptions[2].binding = 0;
+		attribute_descriptions[2].location = 2;
+		attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attribute_descriptions[2].offset = offsetof(vertex_data, tex_coord);
+
 		return attribute_descriptions;
 	}
 };
 
-const std::vector<vertex_data> vertices = {{{-0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},
-										   {{+0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-										   {{+0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}},
-										   {{-0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}}};
+const std::vector<vertex_data> vertices = {{{-0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+										   {{+0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+										   {{+0.5f, +0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+										   {{-0.5f, +0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 
 const std::vector<uint16_t> indices = {0, 2, 1, 2, 0, 3};
 
@@ -155,7 +163,7 @@ private:
 	VkFormat m_swapchain_image_format;
 	VkExtent2D m_swapchain_extent;
 	std::vector<VkImage> m_swapchain_images;
-	std::vector<VkImageView> m_swapchain_image_views;
+	std::vector<vk_image_view> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 	VkDescriptorSetLayout m_descriptor_set_layout;
 	VkPipelineLayout m_pipeline_layout;
@@ -169,6 +177,8 @@ private:
 	std::vector<vk_buffer> m_uniform_buffers;
 
 	vk_image m_texture_image;
+	vk_image_view m_texture_image_view;
+	vk_sampler m_texture_sampler;
 
 	VkDescriptorPool m_descriptor_pool;
 	std::vector<VkDescriptorSet> m_descriptor_sets;

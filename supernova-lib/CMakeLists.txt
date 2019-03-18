@@ -16,6 +16,10 @@ set(src_engine
 
 set(src_vulkan
 	"src/engine/vulkan/vk_mem_utils.h"
+	"src/engine/vulkan/vk_sampler.cpp"
+	"src/engine/vulkan/vk_sampler.h"
+	"src/engine/vulkan/vk_image_view.cpp"
+	"src/engine/vulkan/vk_image_view.h"
 	"src/engine/vulkan/vk_image.cpp"
 	"src/engine/vulkan/vk_image.h"
 	"src/engine/vulkan/vk_buffer.cpp"

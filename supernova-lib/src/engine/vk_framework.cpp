@@ -424,26 +424,7 @@ bool vk_framework::create_image_views() {
 	m_swapchain_image_views.resize(m_swapchain_images.size());
 
 	for (size_t i = 0; i < m_swapchain_images.size(); ++i) {
-		VkImageViewCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		create_info.image = m_swapchain_images[i];
-		create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		create_info.format = m_swapchain_image_format;
-
-		create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-		create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		create_info.subresourceRange.baseMipLevel = 0;
-		create_info.subresourceRange.levelCount = 1;
-		create_info.subresourceRange.baseArrayLayer = 0;
-		create_info.subresourceRange.layerCount = 1;
-
-		if (vkCreateImageView(m_device, &create_info, nullptr, &m_swapchain_image_views[i]) != VK_SUCCESS) {
-			FATAL_LOG("Failed to create image view!");
-		}
+		m_swapchain_image_views[i].init(m_swapchain_images[i], m_swapchain_image_format);
 	}
 
 	VERBOSE_LOG("Created image views");
@@ -503,10 +484,18 @@ bool vk_framework::create_descriptor_set_layout() {
 	ubo_layout_binding.descriptorCount = 1;
 	ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+	VkDescriptorSetLayoutBinding sampler_layout_binding = {};
+	sampler_layout_binding.binding = 1;
+	sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	sampler_layout_binding.descriptorCount = 1;
+	sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	std::array<VkDescriptorSetLayoutBinding, 2> bindings = {ubo_layout_binding, sampler_layout_binding};
+
 	VkDescriptorSetLayoutCreateInfo layout_info = {};
 	layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layout_info.bindingCount = 1;
-	layout_info.pBindings = &ubo_layout_binding;
+	layout_info.bindingCount = static_cast<uint32_t>(bindings.size());
+	layout_info.pBindings = bindings.data();
 
 	if (vkCreateDescriptorSetLayout(m_device, &layout_info, nullptr, &m_descriptor_set_layout) !=
 		VK_SUCCESS) {
@@ -677,7 +666,7 @@ bool vk_framework::create_frame_buffers() {
 	m_swapchain_framebuffers.resize(m_swapchain_image_views.size());
 
 	for (size_t i = 0; i < m_swapchain_image_views.size(); ++i) {
-		VkImageView attachments[] = {m_swapchain_image_views[i]};
+		VkImageView attachments[] = {m_swapchain_image_views[i].get_image_view()};
 
 		VkFramebufferCreateInfo framebuffer_info = {};
 		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -717,6 +706,8 @@ bool vk_framework::create_command_pool() {
 
 bool vk_framework::create_texture_image() {
 	m_texture_image.init("assets/textures/texture.jpg");
+	m_texture_image_view.init(m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM);
+	m_texture_sampler.init(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 	VERBOSE_LOG("Created texture image");
 	return true;
@@ -782,14 +773,17 @@ bool vk_framework::create_uniform_buffers() {
 }
 
 bool vk_framework::create_descriptor_pool() {
-	VkDescriptorPoolSize pool_size = {};
-	pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pool_size.descriptorCount = static_cast<uint32_t>(m_swapchain_images.size());
+	std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
+
+	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	pool_sizes[0].descriptorCount = static_cast<uint32_t>(m_swapchain_images.size());
+	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pool_sizes[1].descriptorCount = static_cast<uint32_t>(m_swapchain_images.size());
 
 	VkDescriptorPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.poolSizeCount = 1;
-	pool_info.pPoolSizes = &pool_size;
+	pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
+	pool_info.pPoolSizes = pool_sizes.data();
 	pool_info.maxSets = static_cast<uint32_t>(m_swapchain_images.size());
 
 	if (vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_descriptor_pool) != VK_SUCCESS) {
@@ -822,16 +816,29 @@ bool vk_framework::create_descriptor_sets() {
 		buffer_info.offset = 0;
 		buffer_info.range = sizeof(uniform_buffer_object);
 
-		VkWriteDescriptorSet descriptor_write = {};
-		descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptor_write.dstSet = m_descriptor_sets[i];
-		descriptor_write.dstBinding = 0;
-		descriptor_write.dstArrayElement = 0;
-		descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptor_write.descriptorCount = 1;
-		descriptor_write.pBufferInfo = &buffer_info;
+		VkDescriptorImageInfo image_info = {};
+		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		image_info.imageView = m_texture_image_view.get_image_view();
+		image_info.sampler = m_texture_sampler.get_sampler();
 
-		vkUpdateDescriptorSets(m_device, 1, &descriptor_write, 0, nullptr);
+		std::array<VkWriteDescriptorSet, 2> descriptor_writes = {};
+		descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[0].dstSet = m_descriptor_sets[i];
+		descriptor_writes[0].dstBinding = 0;
+		descriptor_writes[0].dstArrayElement = 0;
+		descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptor_writes[0].descriptorCount = 1;
+		descriptor_writes[0].pBufferInfo = &buffer_info;
+
+		descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptor_writes[1].dstSet = m_descriptor_sets[i];
+		descriptor_writes[1].dstBinding = 1;
+		descriptor_writes[1].dstArrayElement = 0;
+		descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptor_writes[1].descriptorCount = 1;
+		descriptor_writes[1].pImageInfo = &image_info;
+
+		vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
 	}
 
 	VERBOSE_LOG("Created descriptor sets");
@@ -963,6 +970,8 @@ void vk_framework::destroy() {
 	vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
 	for (auto& uniform_buffer : m_uniform_buffers) uniform_buffer.destroy();
 
+	m_texture_sampler.destroy();
+	m_texture_image_view.destroy();
 	m_texture_image.destroy();
 	m_index_buffer.destroy();
 	m_vertex_buffer.destroy();
@@ -1057,7 +1066,7 @@ void vk_framework::destroy_swapchain() {
 	vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
 	vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 
-	for (auto image_view : m_swapchain_image_views) vkDestroyImageView(m_device, image_view, nullptr);
+	for (auto image_view : m_swapchain_image_views) image_view.destroy();
 
 	vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 }
@@ -1104,7 +1113,7 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view =
-		glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(45.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
