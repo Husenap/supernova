@@ -4,6 +4,8 @@
 
 #include "window.h"
 
+#include <iostream>
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -15,8 +17,7 @@ const bool enable_validation_layers = false;
 
 namespace snova {
 vk_framework::vk_framework()
-	: m_physical_device(VK_NULL_HANDLE)
-	, m_spline(2, 3, 3) {}
+	: m_physical_device(VK_NULL_HANDLE) {}
 
 vk_framework::~vk_framework() {}
 
@@ -45,9 +46,23 @@ bool vk_framework::init() {
 
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
 
-	auto ctrlp = m_spline.controlPoints();
-	ctrlp = {-1.f, 0.5f, -1.f, 0.f, 1.0f, 0.f, 1.f, 0.5f, -1.f, 0.f, 1.0f, 0.f};
-	m_spline.setControlPoints(ctrlp);
+	{
+		int nctrlp = 8;
+		m_spline = tinyspline::BSpline(nctrlp, 3, 3);
+		auto ctrlp = m_spline.controlPoints();
+
+		INFO_LOG("%d, %d, %d", m_spline.dimension(), m_spline.degree(), m_spline.order());
+
+		for (int i = 0; i < nctrlp; ++i)
+		{
+			ctrlp[i*3+0] = -3.f + float(i);
+			ctrlp[i*3+1] = (i&1)*2.0f+1.f;
+			ctrlp[i*3+2] = 1.f;
+		}
+		m_spline.setControlPoints(ctrlp);
+
+		m_spline = m_spline.toBeziers();
+	}
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -1168,13 +1183,13 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::mat4(1.0f);
 
-	auto result = m_spline.eval(std::fmodf(t, 1.0f)).result();
+	auto result = m_spline(0.5f + 0.5f * std::cosf(t)).result();
 
-	ubo.view = glm::lookAt(glm::vec3(result[0], result[1], result[2]),
-						   glm::vec3(0.0f, 0.0f, 0.0f),
-						   glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.view = glm::lookAt(
+		glm::vec3(result[0], result[1], result[2]), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

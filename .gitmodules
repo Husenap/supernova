@@ -7,3 +7,6 @@
 [submodule "third_party/stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb.git
+[submodule "third_party/tinyspline"]
+	path = third_party/tinyspline
+	url = https://github.com/msteinbeck/tinyspline.git
