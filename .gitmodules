@@ -7,3 +7,6 @@
 [submodule "third_party/stb"]
 	path = third_party/stb
 	url = https://github.com/nothings/stb.git
+[submodule "third_party/shaderc"]
+	path = third_party/shaderc
+	url = https://github.com/google/shaderc.git
