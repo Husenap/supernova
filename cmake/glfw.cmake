@@ -17,3 +17,5 @@ set(gfx_includes
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm"
 	"${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb"
 	"$ENV{VULKAN_SDK}/Include")
+
+set_target_properties("glfw" PROPERTIES FOLDER "third_party//GLFW")
