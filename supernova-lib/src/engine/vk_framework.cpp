@@ -51,8 +51,6 @@ bool vk_framework::init() {
 		m_spline = tinyspline::BSpline(nctrlp, 3, 3);
 		auto ctrlp = m_spline.controlPoints();
 
-		INFO_LOG("%d, %d, %d", m_spline.dimension(), m_spline.degree(), m_spline.order());
-
 		for (int i = 0; i < nctrlp; ++i)
 		{
 			ctrlp[i*3+0] = -3.f + float(i);
