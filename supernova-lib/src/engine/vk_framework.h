@@ -126,7 +126,7 @@ private:
 	bool create_descriptor_set_layout();
 
 	bool create_graphics_pipeline();
-	VkShaderModule create_shader_module(const std::vector<char>& code);
+	VkShaderModule create_shader_module(const std::vector<uint32_t>& code);
 
 	bool create_framebuffers();
 

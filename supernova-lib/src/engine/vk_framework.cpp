@@ -4,6 +4,8 @@
 
 #include "window.h"
 
+#include <shaderc/shaderc.hpp>
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -541,12 +543,32 @@ static std::vector<char> read_file(const std::string& filename) {
 
 	return buffer;
 }
-bool vk_framework::create_graphics_pipeline() {
-	auto vert_shader_code = read_file("assets/shaders/simple.vert.spv");
-	auto frag_shader_code = read_file("assets/shaders/simple.frag.spv");
 
+std::vector<uint32_t> compile_file(const std::string& source_file, shaderc_shader_kind kind) {
+	shaderc::Compiler compiler;
+	shaderc::CompileOptions options;
+
+	auto shader_code = read_file(source_file);
+
+	shaderc::SpvCompilationResult module =
+		compiler.CompileGlslToSpv(shader_code.data(), shader_code.size(), kind, source_file.c_str());
+
+	if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+		FATAL_LOG("Failed to compile shader: %s", module.GetErrorMessage().c_str())
+		return std::vector<uint32_t>();
+	}
+
+	return {module.cbegin(), module.cend()};
+}
+
+bool vk_framework::create_graphics_pipeline() {
+	auto vert_shader_code = compile_file("assets/shaders/simple.vert", shaderc_glsl_vertex_shader);
+	auto frag_shader_code = compile_file("assets/shaders/simple.frag", shaderc_glsl_fragment_shader);
+
+	START_TIMER(shader_compile_time);
 	VkShaderModule vert_shader_module = create_shader_module(vert_shader_code);
 	VkShaderModule frag_shader_module = create_shader_module(frag_shader_code);
+	END_TIMER(shader_compile_time);
 
 	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
 	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -674,11 +696,11 @@ bool vk_framework::create_graphics_pipeline() {
 	return true;
 }
 
-VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code) {
+VkShaderModule vk_framework::create_shader_module(const std::vector<uint32_t>& code) {
 	VkShaderModuleCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	create_info.codeSize = code.size();
-	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	create_info.codeSize = sizeof(code[0]) * code.size();
+	create_info.pCode = code.data();
 
 	VkShaderModule shader_module;
 	if (vkCreateShaderModule(m_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
@@ -1163,7 +1185,7 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	//ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::mat4(1.0f);
 	ubo.view =
 		glm::lookAt(glm::vec3(0.f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
