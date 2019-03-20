@@ -4,6 +4,8 @@
 
 #include "window.h"
 
+#include <model_loader/model_loader.h>
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -43,6 +45,9 @@ bool vk_framework::init() {
 	if (!create_sync_objects()) return false;
 
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
+
+	model_loader m_model_loader;
+	auto model_data = m_model_loader.load_model("assets/models/chalet.obj");
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -1163,7 +1168,7 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	//ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::mat4(1.0f);
 	ubo.view =
 		glm::lookAt(glm::vec3(0.f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));

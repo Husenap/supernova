@@ -11,7 +11,7 @@
 #include <optional>
 #include <vector>
 
-#include "singleton.h"
+#include <singleton/singleton.h>
 
 namespace snova {
 struct queue_family_indices {

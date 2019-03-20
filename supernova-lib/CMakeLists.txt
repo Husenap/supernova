@@ -50,7 +50,7 @@ target_link_libraries(${target_name} PUBLIC
 	"supernova-utils-lib")
 
 target_include_directories(${target_name} PUBLIC
-	"../supernova-utils-lib/include"
+	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${gfx_includes})
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)

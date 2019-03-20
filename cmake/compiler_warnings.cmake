@@ -11,7 +11,6 @@ if (MSVC)
         /w14287					# 'operator': unsigned/negative constant mismatch
         /we4289					# nonstandard extension used: 'variable': loop control variable declared in the for-loop is used outside the for-loop scope
         /w14296					# 'operator': expression is always 'boolean_value'
-        /w14296					# 'operator': expression is always 'boolean_value'
         /w14311					# 'variable': pointer truncation from 'type1' to 'type2'
         /w14545					# expression before comma evaluates to a function which is missing an argument list
         /w14546					# function call before comma missing argument list

@@ -1,6 +1,6 @@
 #include <supernova/supernova-lib.h>
 
-#include <logger.h>
+#include <logger/logger.h>
 
 int main(int, char**) {
 	INFO_LOG("Application Starting...");

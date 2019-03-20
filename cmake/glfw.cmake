@@ -1,5 +1,4 @@
-find_package(OpenGL REQUIRED)
-
+message("-- External Project: GLFW")
 
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -10,6 +9,7 @@ add_subdirectory("third_party/glfw")
 
 set(gfx_libraries
 	"glfw"
+	"assimp"
 	"$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
 
 set(gfx_includes

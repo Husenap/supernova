@@ -2,7 +2,7 @@
 
 typedef struct GLFWwindow GLFWwindow;
 
-#include <singleton.h>
+#include <singleton/singleton.h>
 #include <glm/vec2.hpp>
 
 #include <functional>
