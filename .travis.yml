@@ -6,11 +6,12 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - libx11-dev
+      - cmake
       - libxrandr-dev
-      - libudev-dev
+      - libxinerama-dev
+      - libxcursor-dev
+      - libxi-dev
       - g++-7
-      - libgl1-mesa-dev
       
 
 env: 
