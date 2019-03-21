@@ -4,7 +4,7 @@ os: linux
 dist: trusty
 
 env:
-  - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE:STRING=Debug"
+  - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 GCOV=/usr/bin/gcov-7 CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE:STRING=Debug"
 
 branches:
   only:
@@ -26,7 +26,8 @@ addons:
       - g++-8
 
 before_script:
-- sudo apt-get install
+  - sudo -H pip install coverage
+  - sudo apt-get install
 
 install:
   - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz
@@ -43,6 +44,7 @@ script:
   - export CC=$CC_EXE
   - cmake $CMAKE_OPTIONS .
   - cmake --build .
+  - bash <(curl -s https://codecov.io/bash) -x $GCOV
 
 after_success:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
@@ -52,4 +54,3 @@ after_failure:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
   - chmod +x send.sh
   - ./send.sh failure $WEBHOOK_URL
-
