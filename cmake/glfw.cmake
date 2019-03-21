@@ -10,8 +10,8 @@ if (WIN32)
 	set(VULKAN_INC_PATH "$ENV{VULKAN_SDK}/Include")
 endif()
 if (UNIX)
-	set(VULKAN_LIB_PATH "$ENV{VULKAN_SDK}/x86_64/lib/libvulkan.so")
-	set(VULKAN_INC_PATH "$ENV{VULKAN_SDK}/x86_64/include")
+	set(VULKAN_LIB_PATH "$ENV{VULKAN_SDK}/lib/libvulkan.so")
+	set(VULKAN_INC_PATH "$ENV{VULKAN_SDK}/include")
 endif()
 
 set(gfx_libraries
