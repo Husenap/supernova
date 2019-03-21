@@ -28,3 +28,5 @@ target_link_libraries(${target_name} PUBLIC "compiler-warnings"
 											${gfx_libraries})
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)
+
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
