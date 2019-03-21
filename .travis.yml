@@ -11,11 +11,11 @@ addons:
       - libxinerama-dev
       - libxcursor-dev
       - libxi-dev
-      - g++-7
+      - g++-8
       
 
 env: 
-  - CXX_EXE=/usr/bin/g++-7 CC_EXE=/usr/bin/gcc-7 CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE:STRING=Debug"
+  - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE:STRING=Debug"
 
 script:
   - export CXX=$CXX_EXE
