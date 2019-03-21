@@ -58,4 +58,6 @@ void vk_buffer::destroy() {
 	vkFreeMemory(vk_framework::get_device(), m_buffer_memory, nullptr);
 }
 
+VkDevice& vk_buffer::get_device() { return vk_framework::get_device(); }
+
 }  // namespace snova
