@@ -6,23 +6,15 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - libx11-dev
-      - libxrandr-dev
-      - libudev-dev
       - g++-7
-      - libgl1-mesa-dev
       
 
 env: 
-  - CXX_EXE=/usr/bin/g++-7 CC_EXE=/usr/bin/gcc-7 GCOV=/usr/bin/gcov-7 CMAKE_OPTIONS="-DENABLE_COVERAGE:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Debug"
-
-before_script:
-  - sudo -H pip install coverage
+  - CXX_EXE=/usr/bin/g++-7 CC_EXE=/usr/bin/gcc-7 -DCMAKE_BUILD_TYPE:STRING=Debug"
 
 script:
   - export CXX=$CXX_EXE
   - export CC=$CC_EXE
-  - cmake $CMAKE_OPTIONS .
   - cmake --build .
 
 after_success:
