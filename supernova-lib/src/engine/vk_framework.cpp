@@ -47,7 +47,7 @@ bool vk_framework::init() {
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
 
 	model_loader m_model_loader;
-	auto model_data = m_model_loader.load_model("assets/models/chalet.obj");
+	auto model_data = m_model_loader.load_model("assets/models/vikingroom.fbx");
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;

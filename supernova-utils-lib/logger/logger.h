@@ -1,6 +1,8 @@
 #pragma once
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
+
+#include <chrono>
 
 namespace snova
 {
@@ -52,8 +54,9 @@ namespace snova
 #define LOG_LEVEL(LEVEL) snova::logger::get().set_level(LEVEL);
  
 #define START_TIMER(ID) std::chrono::steady_clock::time_point ID = std::chrono::steady_clock::now();
-#define END_TIMER(ID) INFO_LOG("\"%s\" took %f ms", #ID, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - ID).count()/1000.f);
+#define END_TIMER(ID) INFO_LOG("'%s' took %f ms", #ID, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - ID).count()/1000.f);
 
+/*
 #else
 
 #define INFO_LOG(...)
@@ -68,4 +71,5 @@ namespace snova
 #define END_TIMER(ID)
 
 #endif
+*/
 

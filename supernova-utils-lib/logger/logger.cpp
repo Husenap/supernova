@@ -1,4 +1,4 @@
-﻿#ifndef NDEBUG
+﻿//#ifndef NDEBUG
 #include "logger.h"
 
 #include <cstdarg>
@@ -103,4 +103,4 @@ logger::logger() {
 }
 }  // namespace snova
 
-#endif
+//#endif
