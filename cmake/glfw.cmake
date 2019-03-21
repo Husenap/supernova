@@ -7,6 +7,11 @@ if (UNIX)
 	set(VULKAN_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
 endif()
 
+
+if(NOT VULKAN_LIBRARY OR NOT VULKAN_INCLUDE_DIR)
+	message(FATAL_ERROR "Vulkan SDK not located!")
+endif()
+
 message("-- Vulkan paths:")
 message("-- ${VULKAN_LIBRARY}")
 message("-- ${VULKAN_INCLUDE_DIR}")

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.5.0)
 project("supernova" C CXX)
 
+include("cmake/code_coverage.cmake")
 include("cmake/compiler_warnings.cmake")
 include("cmake/compiler_features.cmake")
 include("cmake/cotire.cmake")
