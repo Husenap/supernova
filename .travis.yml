@@ -1,5 +1,5 @@
 language: cpp
-dist: xenial
+dist: trusty
 
 addons:
   apt:
@@ -20,7 +20,7 @@ env:
 script:
   - export CXX=$CXX_EXE
   - export CC=$CC_EXE
-  - cmake .
+  - cmake $CMAKE_OPTIONS .
   - cmake --build .
 
 after_success:
