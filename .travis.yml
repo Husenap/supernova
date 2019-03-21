@@ -3,15 +3,15 @@ sudo: required
 os: linux
 dist: trusty
 
-env: 
+env:
   - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE:STRING=Debug"
 
 branches:
   only:
     - master
-    
+
 compiler:
-  - gcc
+  - clang
 
 addons:
   apt:
@@ -26,7 +26,7 @@ addons:
       - g++-8
 
 before_script:
-- sudo apt-get install 
+- sudo apt-get install
 
 install:
   - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz
