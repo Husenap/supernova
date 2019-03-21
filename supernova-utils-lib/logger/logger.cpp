@@ -23,8 +23,7 @@ void logger::log(
 
 	va_list args;
 	va_start(args, format_string);
-	vsprintf_s(buffer1, format_string, args);
-	//perror(buffer1);
+	vsprintf(buffer1, format_string, args);
 	va_end(args);
 
 	std::string file_name = std::filesystem::path(file).filename().string();
@@ -42,13 +41,14 @@ void logger::log(
 
 	char buffer2[MAXSIZE];
 
-	sprintf_s(buffer2,
+	sprintf (buffer2,
 			  "[%s]%s(%s:%li): %s\n",
 			  level_strings[log_level],
 			  short_function_name.c_str(),
 			  file_name.c_str(),
 			  line,
 			  buffer1);
+
 #ifdef _WIN32
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, int(log_level) + 2);
