@@ -1,0 +1,6 @@
+image: Visual Studio 2017
+clone_folder: c:\dev\supernova
+build_script:
+ - echo build_script
+ - cmake . -A x64 -B .build
+ - cmake --build .build
