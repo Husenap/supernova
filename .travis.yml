@@ -25,10 +25,6 @@ addons:
       - libxi-dev
       - g++-8
 
-before_script:
-  - sudo -H pip install coverage
-  - sudo apt-get install
-
 install:
   - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz
   - tar -xzvf premake-5.0.0-alpha11-linux.tar.gz
@@ -39,7 +35,12 @@ install:
   - tar zxf vulkansdk-linux-x86_64-$VK_VERSION.tar.gz
   - export VULKAN_SDK=$TRAVIS_BUILD_DIR/$VK_VERSION/x86_64
 
+before_script:
+  - sudo apt-get install
+  - sudo -H pip install coverage
+
 script:
+  - coverage help
   - export CXX=$CXX_EXE
   - export CC=$CC_EXE
   - cmake $CMAKE_OPTIONS .
