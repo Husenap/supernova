@@ -13,9 +13,13 @@ install:
   - git submodule update --init --recursive
 
 build_script:
- - echo build_script
- - cmake . -A x64 -B .build
- - cmake --build .build
+  - echo build_script
+  - cmake . -A x64 -B .build
+  - cmake --build .build
+test_script:
+  - echo test_script
+  - cd .build
+  - ctest .
 
 on_success:
   - ps: Invoke-RestMethod https://raw.githubusercontent.com/DiscordHooks/appveyor-discord-webhook/master/send.ps1 -o send.ps1
