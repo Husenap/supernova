@@ -24,6 +24,7 @@ addons:
       - libxcursor-dev
       - libxi-dev
       - g++-8
+      - lcov
 
 install:
   - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz
@@ -46,6 +47,9 @@ script:
   - cmake $CMAKE_OPTIONS .
   - cmake --build .
   - ls -la
+  
+  - lcov --directory . --capture --output-file .coverage
+  - lcov --list .coverage
   - bash <(curl -s https://codecov.io/bash) -x $GCOV
 
 after_success:
