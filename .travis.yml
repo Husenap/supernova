@@ -44,6 +44,7 @@ script:
   - export CC=$CC_EXE
   - cmake $CMAKE_OPTIONS .
   - cmake --build .
+  - ls -la
   - bash <(curl -s https://codecov.io/bash) -x $GCOV
 
 after_success:
