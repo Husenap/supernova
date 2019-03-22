@@ -4,7 +4,7 @@ os: linux
 dist: trusty
 
 env:
-  - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 GCOV=/usr/bin/gcov-7 CMAKE_OPTIONS="-DENABLE_COVERAGE:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Debug"
+  - CXX_EXE=/usr/bin/g++-8 CC_EXE=/usr/bin/gcc-8 GCOV=/usr/bin/gcov-8 CMAKE_OPTIONS="-DENABLE_COVERAGE:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Debug"
 
 branches:
   only:
@@ -24,7 +24,6 @@ addons:
       - libxcursor-dev
       - libxi-dev
       - g++-8
-      - lcov
 
 install:
   - wget https://github.com/premake/premake-core/releases/download/v5.0.0-alpha11/premake-5.0.0-alpha11-linux.tar.gz
@@ -45,11 +44,8 @@ script:
   - export CXX=$CXX_EXE
   - export CC=$CC_EXE
   - cmake $CMAKE_OPTIONS .
-  - cmake --build .
+  - cmake --build .  
   - ls -la
-  
-  - lcov --directory . --capture --output-file .coverage
-  - lcov --list .coverage
   - bash <(curl -s https://codecov.io/bash) -x $GCOV
 
 after_success:
