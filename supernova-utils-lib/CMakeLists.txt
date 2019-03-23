@@ -1,9 +1,6 @@
 set(target_name "supernova-utils-lib")
 
 set(src_include
-	)
-
-set(src_include
 	"include/logger.h"
 	"include/singleton.h"
 	)
