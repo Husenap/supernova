@@ -4,8 +4,6 @@
 
 #include "window.h"
 
-#include <model_loader/model_loader.h>
-
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -36,8 +34,7 @@ bool vk_framework::init() {
 	if (!create_depth_resources()) return false;
 	if (!create_framebuffers()) return false;
 	if (!create_texture_image()) return false;
-	if (!create_vertex_buffer()) return false;
-	if (!create_index_buffer()) return false;
+	if (!create_model()) return false;
 	if (!create_uniform_buffers()) return false;
 	if (!create_descriptor_pool()) return false;
 	if (!create_descriptor_sets()) return false;
@@ -45,9 +42,6 @@ bool vk_framework::init() {
 	if (!create_sync_objects()) return false;
 
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
-
-	model_loader m_model_loader;
-	auto model_data = m_model_loader.load_model("assets/models/vikingroom.fbx");
 
 	VERBOSE_LOG("Created vulkan framework");
 	return true;
@@ -753,7 +747,7 @@ bool vk_framework::create_depth_resources() {
 }
 
 bool vk_framework::create_texture_image() {
-	m_texture_image.init_from_file("assets/textures/texture.jpg");
+	m_texture_image.init_from_file("assets/textures/2b.png");
 	m_texture_image_view.init(
 		m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 	m_texture_sampler.init(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
@@ -762,47 +756,8 @@ bool vk_framework::create_texture_image() {
 	return true;
 }
 
-bool vk_framework::create_vertex_buffer() {
-	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
-
-	vk_buffer staging_buffer;
-	staging_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	staging_buffer.set_data(vertices.data());
-
-	m_vertex_buffer.init(buffer_size,
-						 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-						 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	m_vertex_buffer.copy_data_from(staging_buffer);
-
-	staging_buffer.destroy();
-
-	VERBOSE_LOG("Created vertex buffer");
-	return true;
-}
-
-bool vk_framework::create_index_buffer() {
-	VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
-
-	vk_buffer staging_buffer;
-	staging_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	staging_buffer.set_data(indices.data());
-
-	m_index_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-						VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	m_index_buffer.copy_data_from(staging_buffer);
-
-	staging_buffer.destroy();
-
-	VERBOSE_LOG("Created index buffer");
+bool vk_framework::create_model() {
+	m_model = m_model_loader.load_model("assets/models/2b.fbx");
 	return true;
 }
 
@@ -939,8 +894,8 @@ bool vk_framework::create_command_buffers() {
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
 		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_vertex_buffer.get_buffer(), offsets);
-		vkCmdBindIndexBuffer(command_buffer, m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model->m_vertex_buffer.get_buffer(), offsets);
+		vkCmdBindIndexBuffer(command_buffer, m_model->m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT32);
 
 		vkCmdBindDescriptorSets(command_buffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -951,7 +906,7 @@ bool vk_framework::create_command_buffers() {
 								0,
 								nullptr);
 
-		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(m_model->m_indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(command_buffer);
 
@@ -1027,8 +982,9 @@ void vk_framework::destroy() {
 	m_texture_sampler.destroy();
 	m_texture_image_view.destroy();
 	m_texture_image.destroy();
-	m_index_buffer.destroy();
-	m_vertex_buffer.destroy();
+
+	m_model->m_vertex_buffer.destroy();
+	m_model->m_index_buffer.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
@@ -1170,8 +1126,11 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::mat4(1.0f);
+
+	float d = 4.0f;
+
 	ubo.view =
-		glm::lookAt(glm::vec3(0.f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::lookAt(glm::vec3(std::cosf(t)*d, d, std::sinf(t)*d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
