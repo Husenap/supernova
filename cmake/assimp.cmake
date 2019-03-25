@@ -13,13 +13,15 @@ set(ASSIMP_BUILD_FBX_IMPORTER TRUE CACHE BOOL "" FORCE)
 
 add_subdirectory(third_party/assimp)
 
-set(assimp_libraries
-	"assimp"
-	"zlib"
-	"zlibstatic"
-	"IrrXML"
-	"UpdateAssimpLibsDebugSymbolsAndDLLs")
+if (MSVC)
+	set(assimp_libraries
+		"assimp"
+		"zlib"
+		"zlibstatic"
+		"IrrXML"
+		"UpdateAssimpLibsDebugSymbolsAndDLLs")
 
-foreach(library ${assimp_libraries})
-    set_target_properties(${library} PROPERTIES FOLDER "third_party//assimp")
-endforeach()
+	foreach(library ${assimp_libraries})
+		set_target_properties(${library} PROPERTIES FOLDER "third_party//assimp")
+	endforeach()
+endif()

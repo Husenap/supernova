@@ -2,7 +2,6 @@
 #include "logger.h"
 
 #include <cstdarg>
-#include <filesystem>
 #include <functional>
 #include <string>
 
@@ -26,9 +25,12 @@ void logger::log(
 	vsprintf(buffer1, format_string, args);
 	va_end(args);
 
-	std::string file_name = std::filesystem::path(file).filename().string();
-	std::string clean_function_name = function_name;
+	std::string file_name = file;
+	if (file_name.find_last_of("\\/") != std::string::npos){
+		file_name = file_name.substr(file_name.find_last_of("\\/") + 1);
+	}
 
+	std::string clean_function_name = function_name;
 	if (clean_function_name.find(":<lambda") != std::string::npos) {
 		clean_function_name =
 			clean_function_name.substr(0, clean_function_name.find(":<lambda") - 1) + "<lambda>";
@@ -41,13 +43,13 @@ void logger::log(
 
 	char buffer2[MAXSIZE];
 
-	sprintf (buffer2,
-			  "[%s]%s(%s:%li): %s\n",
-			  level_strings[log_level],
-			  short_function_name.c_str(),
-			  file_name.c_str(),
-			  line,
-			  buffer1);
+	sprintf(buffer2,
+			"[%s]%s(%s:%li): %s\n",
+			level_strings[log_level],
+			short_function_name.c_str(),
+			file_name.c_str(),
+			line,
+			buffer1);
 
 #ifdef _WIN32
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);

@@ -24,8 +24,8 @@ set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${target_name} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(${target_name} PUBLIC "compiler-warnings"
-											${gfx_libraries})
+target_link_libraries(${target_name} PUBLIC "compiler-warnings")
+target_link_libraries(${target_name} PUBLIC ${gfx_libraries})
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)
 

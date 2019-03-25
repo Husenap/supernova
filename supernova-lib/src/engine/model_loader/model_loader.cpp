@@ -1,12 +1,12 @@
 #include "model_loader.h"
 
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
-#include <assimp/Importer.hpp>
-
 #include <logger/logger.h>
 
 #include <fstream>
+
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <assimp/Importer.hpp>
 
 static Assimp::Importer importer;
 

@@ -8,7 +8,7 @@ const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_N
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifndef NDEBUG
-const bool enable_validation_layers = true;
+const bool enable_validation_layers = false;
 #else
 const bool enable_validation_layers = false;
 #endif
@@ -49,8 +49,8 @@ bool vk_framework::init() {
 
 bool vk_framework::create_vk_instance() {
 	if (enable_validation_layers && !check_validation_layer_support()) {
-		ERROR_LOG("Validation layers requested but not available!");
-		return false;
+		WARNING_LOG("Validation layers requested but not available, skipping them!");
+		return true;
 	}
 
 	VkApplicationInfo app_info = {};
@@ -76,8 +76,9 @@ bool vk_framework::create_vk_instance() {
 		create_info.enabledLayerCount = 0;
 	}
 
-	if (vkCreateInstance(&create_info, nullptr, &m_vk_instance) != VK_SUCCESS) {
-		FATAL_LOG("vkCreateInstance returned error code!");
+	VkResult result = vkCreateInstance(&create_info, nullptr, &m_vk_instance);
+	if (result != VK_SUCCESS) {
+		FATAL_LOG("vkCreateInstance returned error code: %d", result);
 		return false;
 	}
 
@@ -121,8 +122,8 @@ bool vk_framework::setup_debug_messenger() {
 
 	if (create_debug_utils_messnger_ext(m_vk_instance, &create_info, nullptr, &m_debug_messenger) !=
 		VK_SUCCESS) {
-		ERROR_LOG("Failed to create debug utils messenger");
-		return false;
+		WARNING_LOG("Failed to create debug utils messenger, skipping!");
+		return true;
 	}
 
 	VERBOSE_LOG("Set Up Debug Messenger");
@@ -130,9 +131,9 @@ bool vk_framework::setup_debug_messenger() {
 }
 
 bool vk_framework::create_surface() {
-	if (glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface) !=
-		VK_SUCCESS) {
-		FATAL_LOG("Failed to create window surface");
+	VkResult result = glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface);
+	if (result != VK_SUCCESS) {
+		FATAL_LOG("Failed to create window surface: %d", result);
 		return false;
 	}
 
@@ -1130,7 +1131,7 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 	float d = 4.0f;
 
 	ubo.view =
-		glm::lookAt(glm::vec3(std::cosf(t)*d, d, std::sinf(t)*d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::lookAt(glm::vec3(cosf(t)*d, d, sinf(t)*d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

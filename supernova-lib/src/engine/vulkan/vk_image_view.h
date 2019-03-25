@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 namespace snova {
 class vk_image_view {
 public:

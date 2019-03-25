@@ -50,10 +50,10 @@ set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${target_name} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON)
 set_target_properties(${target_name} PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT ${src_precompiled})
 
-target_link_libraries(${target_name} PUBLIC
-	${gfx_libraries}
-	"compiler-warnings"
-	"supernova-utils-lib")
+target_link_libraries(${target_name} PUBLIC ${gfx_libraries})
+target_link_libraries(${target_name} PUBLIC "compiler-warnings")
+target_link_libraries(${target_name} PUBLIC "supernova-utils-lib")
+target_link_libraries(${target_name} PUBLIC "supernova-coverage")
 
 target_include_directories(${target_name} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -61,4 +61,4 @@ target_include_directories(${target_name} PUBLIC
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)
 
-cotire(${target_name})
+#cotire(${target_name})

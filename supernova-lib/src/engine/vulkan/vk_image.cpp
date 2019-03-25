@@ -3,6 +3,8 @@
 #include "../vk_framework.h"
 #include "vk_mem_utils.h"
 
+#include "../../precompiled.h"
+
 namespace snova {
 bool vk_image::init(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage) {
 	VkImageCreateInfo image_info = {};

@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vulkan/vulkan.h>
+
 #include "vulkan/vk_buffer.h"
 #include "vulkan/vk_image.h"
 #include "vulkan/vk_image_view.h"
