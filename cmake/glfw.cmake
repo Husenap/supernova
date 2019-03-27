@@ -1,6 +1,5 @@
 message("-- External Project: GLFW")
 
-
 if (WIN32)
 	set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
 	set(VULKAN_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include")

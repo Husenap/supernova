@@ -29,7 +29,6 @@ template <typename T>
 void snova::vk_buffer::set_data(T* in_data) {
 	void* mapped_data;
 	vkMapMemory(get_device(), m_buffer_memory, 0, m_size, 0, &mapped_data);
-	//memcpy(mapped_data, (void*)in_data, (size_t)m_size);
 	std::copy((char*)in_data, (char*)(in_data)+m_size, (char*)mapped_data);
 	vkUnmapMemory(get_device(), m_buffer_memory);
 }
