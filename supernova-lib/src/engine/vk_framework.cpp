@@ -8,7 +8,7 @@ const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_N
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
 #ifndef NDEBUG
-const bool enable_validation_layers = false;
+const bool enable_validation_layers = true;
 #else
 const bool enable_validation_layers = false;
 #endif
@@ -721,6 +721,7 @@ bool vk_framework::create_command_pool() {
 	VkCommandPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	pool_info.queueFamilyIndex = family_indices.m_graphics_family.value();
+	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
 		FATAL_LOG("Failed to create command pool!");
@@ -748,17 +749,22 @@ bool vk_framework::create_depth_resources() {
 }
 
 bool vk_framework::create_texture_image() {
-	m_texture_image.init_from_file("assets/textures/2b.png");
-	m_texture_image_view.init(
-		m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
-	m_texture_sampler.init(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+	m_texture_image.init_from_file("assets/textures/vikingroom.png");
+
+	m_texture_image_view.init(m_texture_image.get_image(),
+							  VK_FORMAT_R8G8B8A8_UNORM,
+							  VK_IMAGE_ASPECT_COLOR_BIT,
+							  m_texture_image.get_mip_levels());
+
+	m_texture_sampler.init(
+		VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_texture_image.get_mip_levels());
 
 	VERBOSE_LOG("Created texture image");
 	return true;
 }
 
 bool vk_framework::create_model() {
-	m_model = m_model_loader.load_model("assets/models/2b.fbx");
+	m_model = m_model_loader.load_model("assets/models/vikingroom.fbx");
 	return true;
 }
 
@@ -865,59 +871,61 @@ bool vk_framework::create_command_buffers() {
 		return false;
 	}
 
-	for (size_t i = 0; i < m_command_buffers.size(); ++i) {
-		auto& command_buffer = m_command_buffers[i];
+	VERBOSE_LOG("created command buffers");
+	return true;
+}
 
-		VkCommandBufferBeginInfo begin_info = {};
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+bool vk_framework::create_command_buffer(uint32_t current_image) {
+	auto& command_buffer = m_command_buffers[current_image];
 
-		if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
-			FATAL_LOG("Failed to begin recording command buffer!");
-			return false;
-		}
+	VkCommandBufferBeginInfo begin_info = {};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-		std::array<VkClearValue, 2> clear_values = {};
-		clear_values[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-		clear_values[1].depthStencil = {1.0f, 0};
-
-		VkRenderPassBeginInfo render_pass_info = {};
-		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		render_pass_info.renderPass = m_render_pass;
-		render_pass_info.framebuffer = m_swapchain_framebuffers[i];
-		render_pass_info.renderArea.offset = {0, 0};
-		render_pass_info.renderArea.extent = m_swapchain_extent;
-		render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-		render_pass_info.pClearValues = clear_values.data();
-
-		vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
-
-		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model->m_vertex_buffer.get_buffer(), offsets);
-		vkCmdBindIndexBuffer(command_buffer, m_model->m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindDescriptorSets(command_buffer,
-								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								m_pipeline_layout,
-								0,
-								1,
-								&m_descriptor_sets[i],
-								0,
-								nullptr);
-
-		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(m_model->m_indices.size()), 1, 0, 0, 0);
-
-		vkCmdEndRenderPass(command_buffer);
-
-		if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
-			FATAL_LOG("Failed to record command buffer!");
-			return false;
-		}
+	if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
+		FATAL_LOG("Failed to begin recording command buffer!");
+		return false;
 	}
 
-	VERBOSE_LOG("created command buffers");
+	std::array<VkClearValue, 2> clear_values = {};
+	clear_values[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+	clear_values[1].depthStencil = {1.0f, 0};
+
+	VkRenderPassBeginInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_info.renderPass = m_render_pass;
+	render_pass_info.framebuffer = m_swapchain_framebuffers[current_image];
+	render_pass_info.renderArea.offset = {0, 0};
+	render_pass_info.renderArea.extent = m_swapchain_extent;
+	render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+	render_pass_info.pClearValues = clear_values.data();
+
+	vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
+
+	VkDeviceSize offsets[] = {0};
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model->m_vertex_buffer.get_buffer(), offsets);
+	vkCmdBindIndexBuffer(command_buffer, m_model->m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdBindDescriptorSets(command_buffer,
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							m_pipeline_layout,
+							0,
+							1,
+							&m_descriptor_sets[current_image],
+							0,
+							nullptr);
+
+	vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(m_model->m_indices.size()), 1, 0, 0, 0);
+
+	vkCmdEndRenderPass(command_buffer);
+
+	if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+		FATAL_LOG("Failed to record command buffer!");
+		return false;
+	}
+	
 	return true;
 }
 
@@ -1030,6 +1038,8 @@ void vk_framework::draw_frame() {
 
 	update_uniform_buffer(image_index);
 
+	create_command_buffer(image_index);
+
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.waitSemaphoreCount = 1;
@@ -1128,10 +1138,10 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::mat4(1.0f);
 
-	float d = 4.0f;
+	float d = 2.0f;
 
-	ubo.view =
-		glm::lookAt(glm::vec3(cosf(t)*d, d, sinf(t)*d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.view = glm::lookAt(
+		glm::vec3(cosf(t) * d, d, sinf(t) * d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

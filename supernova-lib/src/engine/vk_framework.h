@@ -94,6 +94,7 @@ private:
 	bool create_descriptor_sets();
 
 	bool create_command_buffers();
+	bool create_command_buffer(uint32_t current_image);
 
 	bool create_sync_objects();
 

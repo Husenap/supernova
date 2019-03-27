@@ -5,7 +5,7 @@
 #include "../vk_framework.h"
 
 namespace snova {
-bool vk_sampler::init(VkFilter filter, VkSamplerAddressMode address_mode) {
+bool vk_sampler::init(VkFilter filter, VkSamplerAddressMode address_mode, uint32_t mip_levels) {
 	VkSamplerCreateInfo sampler_info = {};
 	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 	sampler_info.magFilter = filter;
@@ -21,8 +21,8 @@ bool vk_sampler::init(VkFilter filter, VkSamplerAddressMode address_mode) {
 	sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
 	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sampler_info.mipLodBias = 0.0f;
-	sampler_info.minLod = 0.0f;
-	sampler_info.maxLod = 0.0f;
+	sampler_info.minLod = 0.f;
+	sampler_info.maxLod = static_cast<float>(mip_levels);
 
 	if (vkCreateSampler(vk_framework::get_device(), &sampler_info, nullptr, &m_sampler) != VK_SUCCESS) {
 		FATAL_LOG("Failed to create sampler!");

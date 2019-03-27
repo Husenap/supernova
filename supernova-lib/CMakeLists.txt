@@ -61,4 +61,4 @@ target_include_directories(${target_name} PUBLIC
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)
 
-#cotire(${target_name})
+cotire(${target_name})

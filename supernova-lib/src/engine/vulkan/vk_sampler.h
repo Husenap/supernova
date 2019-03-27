@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include "../../precompiled.h"
 
 namespace snova {
 class vk_sampler {
 public:
-	bool init(VkFilter filter, VkSamplerAddressMode address_mode);
+	bool init(VkFilter filter, VkSamplerAddressMode address_mode, uint32_t mip_levels = 1);
 
 	void destroy();
 
