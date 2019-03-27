@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vk_buffer.h"
-#include <vulkan/vulkan.h>
 #include "../../precompiled.h"
 
 namespace snova {

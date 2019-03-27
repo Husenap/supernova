@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include "../../precompiled.h"
 
 namespace snova {
 class vk_image_view {

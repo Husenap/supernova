@@ -3,8 +3,6 @@
 #include "../vk_framework.h"
 #include "vk_mem_utils.h"
 
-#include "../../precompiled.h"
-
 namespace snova {
 vk_image::vk_image()
 	: m_mip_levels(1) {}

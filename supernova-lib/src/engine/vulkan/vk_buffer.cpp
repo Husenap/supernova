@@ -1,7 +1,6 @@
 #include "vk_buffer.h"
 
 #include "../vk_framework.h"
-
 #include "vk_mem_utils.h"
 
 namespace snova {
