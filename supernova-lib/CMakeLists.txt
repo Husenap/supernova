@@ -30,6 +30,7 @@ set(src_vulkan
 	"src/engine/vulkan/vk_buffer.h")
 
 set(src_files
+	"src/precompiled.cpp"
 	${src_precompiled}
 	${src_include}
 	${src_engine}

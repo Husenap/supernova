@@ -2,10 +2,7 @@
 
 typedef struct GLFWwindow GLFWwindow;
 
-#include <singleton/singleton.h>
-#include <glm/vec2.hpp>
-
-#include <functional>
+#include "../precompiled.h"
 
 namespace snova {
 
@@ -17,15 +14,12 @@ public:
 	~window() {}
 
 	static bool init();
+	static void destroy();
 
 	static bool should_close();
 
-	static void destroy();
-
 	static glm::ivec2 get_window_size();
-
 	static GLFWwindow* get_window_handle() { return get().m_window_handle; }
-
 	static void register_resize_callback(resize_callback_t callback);
 
 private:

@@ -21,7 +21,6 @@ vk_framework::~vk_framework() {}
 
 bool vk_framework::init() {
 	if (!create_vk_instance()) return false;
-	if (enable_validation_layers && !setup_debug_messenger()) return false;
 	if (!create_surface()) return false;
 	if (!pick_physical_device()) return false;
 	if (!create_logical_device()) return false;
@@ -48,11 +47,6 @@ bool vk_framework::init() {
 }
 
 bool vk_framework::create_vk_instance() {
-	if (enable_validation_layers && !check_validation_layer_support()) {
-		WARNING_LOG("Validation layers requested but not available, skipping them!");
-		return true;
-	}
-
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pApplicationName = "Herro Triangor";
@@ -69,7 +63,7 @@ bool vk_framework::create_vk_instance() {
 	create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
 	create_info.ppEnabledExtensionNames = required_extensions.data();
 
-	if (enable_validation_layers) {
+	if (enable_validation_layers && check_validation_layer_support()) {
 		create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
 		create_info.ppEnabledLayerNames = validation_layers.data();
 	} else {
@@ -109,6 +103,11 @@ void destroy_debug_utils_messenger_ext(VkInstance instance,
 }
 
 bool vk_framework::setup_debug_messenger() {
+	if(!check_validation_layer_support()){
+		WARNING_LOG("No support for validation layers, skipping!");
+		return true;
+	}
+
 	VkDebugUtilsMessengerCreateInfoEXT create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	create_info.messageSeverity =
@@ -199,7 +198,7 @@ int vk_framework::rate_device_suitability(VkPhysicalDevice device) {
 
 	int score = 0;
 	score += 1000 * (device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
-	score += device_props.limits.maxImageDimension2D;
+	score += static_cast<int>(device_props.limits.maxImageDimension2D);
 
 	return score;
 }
@@ -630,12 +629,14 @@ bool vk_framework::create_graphics_pipeline() {
 	color_blending.attachmentCount = 1;
 	color_blending.pAttachments = &color_blend_attachment;
 
+	/*
 	VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
 
 	VkPipelineDynamicStateCreateInfo dynamic_state = {};
 	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic_state.dynamicStateCount = 2;
 	dynamic_state.pDynamicStates = dynamic_states;
+	*/
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {};
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -925,7 +926,7 @@ bool vk_framework::create_command_buffer(uint32_t current_image) {
 		FATAL_LOG("Failed to record command buffer!");
 		return false;
 	}
-	
+
 	return true;
 }
 

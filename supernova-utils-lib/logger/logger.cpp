@@ -11,7 +11,7 @@
 
 namespace snova {
 
-static const char* const level_strings[logger::level::Count + 1] = {
+static const char* const level_strings[logger::level::count + 1] = {
 	"", "---Info", "Verbose", "Warning", "--Error", "--Fatal", ""};
 
 void logger::log(
@@ -63,7 +63,7 @@ void logger::log(
 	printf("%s", buffer2);
 #endif
 
-	if (log_level == Fatal) {
+	if (log_level == level::fatal) {
 		throw std::runtime_error(buffer2);
 	}
 }

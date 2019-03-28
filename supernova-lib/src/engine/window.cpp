@@ -1,7 +1,5 @@
 #include "window.h"
 
-#include "../precompiled.h"
-
 namespace snova {
 bool window::init() {
 	auto& instance = get();

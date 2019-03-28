@@ -46,5 +46,7 @@ else()
 		-Wnull-dereference      # warn if a null dereference is detected
 		-Wuseless-cast          # warn if you perform a cast to the same type
 		-Wdouble-promotion      # warn if float is implicit promoted to double
-		-Wformat=2)             # warn on security issues around functions that format output (ie printf)
+		-Wformat=2              # warn on security issues around functions that format output (ie printf)
+
+		-Wno-invalid-pch)
 endif()

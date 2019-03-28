@@ -1,9 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
-
-#include <vulkan/vulkan.h>
-
 #include "vulkan/vk_buffer.h"
 #include "vulkan/vk_image.h"
 #include "vulkan/vk_image_view.h"
@@ -11,11 +7,7 @@
 
 #include "model_loader/model_loader.h"
 
-#include <array>
-#include <optional>
-#include <vector>
-
-#include <singleton/singleton.h>
+#include "../precompiled.h"
 
 namespace snova {
 struct queue_family_indices {

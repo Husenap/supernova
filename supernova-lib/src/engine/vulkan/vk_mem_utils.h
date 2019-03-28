@@ -11,7 +11,7 @@ static uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags pro
 	vkGetPhysicalDeviceMemoryProperties(vk_framework::get_physical_device(), &mem_properties);
 
 	for (uint32_t i = 0; i < mem_properties.memoryTypeCount; ++i) {
-		if (type_filter & (1 << i) &&
+		if (type_filter & (1u << i) &&
 			(mem_properties.memoryTypes[i].propertyFlags & properties) == properties) {
 			return i;
 		}

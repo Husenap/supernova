@@ -1,8 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <array>
+#include "../../precompiled.h"
 
 #include "../vulkan/vk_buffer.h"
 

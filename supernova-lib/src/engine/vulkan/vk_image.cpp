@@ -59,7 +59,7 @@ bool vk_image::init_from_file(const char* image_file) {
 	}
 
 	m_dimensions = {image_data.x, image_data.y};
-	VkDeviceSize image_size = image_data.x * image_data.y * 4;
+	VkDeviceSize image_size = static_cast<uint32_t>(image_data.x * image_data.y * 4);
 
 	m_mip_levels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_dimensions.x, m_dimensions.y)))) + 1;
 
@@ -169,8 +169,8 @@ void vk_image::generate_mipmaps() {
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.layerCount = 1;
 
-	int32_t mip_width = static_cast<int32_t>(m_dimensions.x);
-	int32_t mip_height = static_cast<int32_t>(m_dimensions.y);
+	int32_t mip_width = m_dimensions.x;
+	int32_t mip_height = m_dimensions.y;
 
 	for (uint32_t i = 1; i < m_mip_levels; ++i) {
 		barrier.subresourceRange.baseMipLevel = i - 1;

@@ -2,14 +2,8 @@
 
 #include "../precompiled.h"
 
-#include <glm/mat4x4.hpp>
-#include <glm/vec4.hpp>
-
 #include "window.h"
 #include "vk_framework.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 namespace snova {
 void supernova::run() {
