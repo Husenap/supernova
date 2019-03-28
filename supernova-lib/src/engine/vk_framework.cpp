@@ -21,7 +21,6 @@ vk_framework::~vk_framework() {}
 
 bool vk_framework::init() {
 	if (!create_vk_instance()) return false;
-	if (enable_validation_layers && !setup_debug_messenger()) return false;
 	if (!create_surface()) return false;
 	if (!pick_physical_device()) return false;
 	if (!create_logical_device()) return false;
@@ -34,8 +33,7 @@ bool vk_framework::init() {
 	if (!create_depth_resources()) return false;
 	if (!create_framebuffers()) return false;
 	if (!create_texture_image()) return false;
-	if (!create_vertex_buffer()) return false;
-	if (!create_index_buffer()) return false;
+	if (!create_model()) return false;
 	if (!create_uniform_buffers()) return false;
 	if (!create_descriptor_pool()) return false;
 	if (!create_descriptor_sets()) return false;
@@ -49,11 +47,6 @@ bool vk_framework::init() {
 }
 
 bool vk_framework::create_vk_instance() {
-	if (enable_validation_layers && !check_validation_layer_support()) {
-		ERROR_LOG("Validation layers requested but not available!");
-		return false;
-	}
-
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pApplicationName = "Herro Triangor";
@@ -70,15 +63,16 @@ bool vk_framework::create_vk_instance() {
 	create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
 	create_info.ppEnabledExtensionNames = required_extensions.data();
 
-	if (enable_validation_layers) {
+	if (enable_validation_layers && check_validation_layer_support()) {
 		create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
 		create_info.ppEnabledLayerNames = validation_layers.data();
 	} else {
 		create_info.enabledLayerCount = 0;
 	}
 
-	if (vkCreateInstance(&create_info, nullptr, &m_vk_instance) != VK_SUCCESS) {
-		FATAL_LOG("vkCreateInstance returned error code!");
+	VkResult result = vkCreateInstance(&create_info, nullptr, &m_vk_instance);
+	if (result != VK_SUCCESS) {
+		FATAL_LOG("vkCreateInstance returned error code: %d", result);
 		return false;
 	}
 
@@ -109,6 +103,11 @@ void destroy_debug_utils_messenger_ext(VkInstance instance,
 }
 
 bool vk_framework::setup_debug_messenger() {
+	if(!check_validation_layer_support()){
+		WARNING_LOG("No support for validation layers, skipping!");
+		return true;
+	}
+
 	VkDebugUtilsMessengerCreateInfoEXT create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	create_info.messageSeverity =
@@ -122,8 +121,8 @@ bool vk_framework::setup_debug_messenger() {
 
 	if (create_debug_utils_messnger_ext(m_vk_instance, &create_info, nullptr, &m_debug_messenger) !=
 		VK_SUCCESS) {
-		ERROR_LOG("Failed to create debug utils messenger");
-		return false;
+		WARNING_LOG("Failed to create debug utils messenger, skipping!");
+		return true;
 	}
 
 	VERBOSE_LOG("Set Up Debug Messenger");
@@ -131,9 +130,9 @@ bool vk_framework::setup_debug_messenger() {
 }
 
 bool vk_framework::create_surface() {
-	if (glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface) !=
-		VK_SUCCESS) {
-		FATAL_LOG("Failed to create window surface");
+	VkResult result = glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface);
+	if (result != VK_SUCCESS) {
+		FATAL_LOG("Failed to create window surface: %d", result);
 		return false;
 	}
 
@@ -199,7 +198,7 @@ int vk_framework::rate_device_suitability(VkPhysicalDevice device) {
 
 	int score = 0;
 	score += 1000 * (device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
-	score += device_props.limits.maxImageDimension2D;
+	score += static_cast<int>(device_props.limits.maxImageDimension2D);
 
 	return score;
 }
@@ -630,12 +629,14 @@ bool vk_framework::create_graphics_pipeline() {
 	color_blending.attachmentCount = 1;
 	color_blending.pAttachments = &color_blend_attachment;
 
+	/*
 	VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
 
 	VkPipelineDynamicStateCreateInfo dynamic_state = {};
 	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic_state.dynamicStateCount = 2;
 	dynamic_state.pDynamicStates = dynamic_states;
+	*/
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {};
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -721,6 +722,7 @@ bool vk_framework::create_command_pool() {
 	VkCommandPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	pool_info.queueFamilyIndex = family_indices.m_graphics_family.value();
+	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	if (vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool) != VK_SUCCESS) {
 		FATAL_LOG("Failed to create command pool!");
@@ -748,56 +750,22 @@ bool vk_framework::create_depth_resources() {
 }
 
 bool vk_framework::create_texture_image() {
-	m_texture_image.init_from_file("assets/textures/texture.jpg");
-	m_texture_image_view.init(
-		m_texture_image.get_image(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
-	m_texture_sampler.init(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+	m_texture_image.init_from_file("assets/textures/vikingroom.png");
+
+	m_texture_image_view.init(m_texture_image.get_image(),
+							  VK_FORMAT_R8G8B8A8_UNORM,
+							  VK_IMAGE_ASPECT_COLOR_BIT,
+							  m_texture_image.get_mip_levels());
+
+	m_texture_sampler.init(
+		VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, m_texture_image.get_mip_levels());
 
 	VERBOSE_LOG("Created texture image");
 	return true;
 }
 
-bool vk_framework::create_vertex_buffer() {
-	VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
-
-	vk_buffer staging_buffer;
-	staging_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	staging_buffer.set_data(vertices.data());
-
-	m_vertex_buffer.init(buffer_size,
-						 VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-						 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	m_vertex_buffer.copy_data_from(staging_buffer);
-
-	staging_buffer.destroy();
-
-	VERBOSE_LOG("Created vertex buffer");
-	return true;
-}
-
-bool vk_framework::create_index_buffer() {
-	VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
-
-	vk_buffer staging_buffer;
-	staging_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	staging_buffer.set_data(indices.data());
-
-	m_index_buffer.init(buffer_size,
-						VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-						VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	m_index_buffer.copy_data_from(staging_buffer);
-
-	staging_buffer.destroy();
-
-	VERBOSE_LOG("Created index buffer");
+bool vk_framework::create_model() {
+	m_model = m_model_loader.load_model("assets/models/vikingroom.fbx");
 	return true;
 }
 
@@ -904,59 +872,61 @@ bool vk_framework::create_command_buffers() {
 		return false;
 	}
 
-	for (size_t i = 0; i < m_command_buffers.size(); ++i) {
-		auto& command_buffer = m_command_buffers[i];
+	VERBOSE_LOG("created command buffers");
+	return true;
+}
 
-		VkCommandBufferBeginInfo begin_info = {};
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+bool vk_framework::create_command_buffer(uint32_t current_image) {
+	auto& command_buffer = m_command_buffers[current_image];
 
-		if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
-			FATAL_LOG("Failed to begin recording command buffer!");
-			return false;
-		}
+	VkCommandBufferBeginInfo begin_info = {};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-		std::array<VkClearValue, 2> clear_values = {};
-		clear_values[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-		clear_values[1].depthStencil = {1.0f, 0};
-
-		VkRenderPassBeginInfo render_pass_info = {};
-		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		render_pass_info.renderPass = m_render_pass;
-		render_pass_info.framebuffer = m_swapchain_framebuffers[i];
-		render_pass_info.renderArea.offset = {0, 0};
-		render_pass_info.renderArea.extent = m_swapchain_extent;
-		render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-		render_pass_info.pClearValues = clear_values.data();
-
-		vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
-
-		VkDeviceSize offsets[] = {0};
-		vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_vertex_buffer.get_buffer(), offsets);
-		vkCmdBindIndexBuffer(command_buffer, m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT16);
-
-		vkCmdBindDescriptorSets(command_buffer,
-								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								m_pipeline_layout,
-								0,
-								1,
-								&m_descriptor_sets[i],
-								0,
-								nullptr);
-
-		vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-
-		vkCmdEndRenderPass(command_buffer);
-
-		if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
-			FATAL_LOG("Failed to record command buffer!");
-			return false;
-		}
+	if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
+		FATAL_LOG("Failed to begin recording command buffer!");
+		return false;
 	}
 
-	VERBOSE_LOG("created command buffers");
+	std::array<VkClearValue, 2> clear_values = {};
+	clear_values[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+	clear_values[1].depthStencil = {1.0f, 0};
+
+	VkRenderPassBeginInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_info.renderPass = m_render_pass;
+	render_pass_info.framebuffer = m_swapchain_framebuffers[current_image];
+	render_pass_info.renderArea.offset = {0, 0};
+	render_pass_info.renderArea.extent = m_swapchain_extent;
+	render_pass_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+	render_pass_info.pClearValues = clear_values.data();
+
+	vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
+
+	VkDeviceSize offsets[] = {0};
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model->m_vertex_buffer.get_buffer(), offsets);
+	vkCmdBindIndexBuffer(command_buffer, m_model->m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdBindDescriptorSets(command_buffer,
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							m_pipeline_layout,
+							0,
+							1,
+							&m_descriptor_sets[current_image],
+							0,
+							nullptr);
+
+	vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(m_model->m_indices.size()), 1, 0, 0, 0);
+
+	vkCmdEndRenderPass(command_buffer);
+
+	if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+		FATAL_LOG("Failed to record command buffer!");
+		return false;
+	}
+
 	return true;
 }
 
@@ -1022,8 +992,9 @@ void vk_framework::destroy() {
 	m_texture_sampler.destroy();
 	m_texture_image_view.destroy();
 	m_texture_image.destroy();
-	m_index_buffer.destroy();
-	m_vertex_buffer.destroy();
+
+	m_model->m_vertex_buffer.destroy();
+	m_model->m_index_buffer.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
@@ -1067,6 +1038,8 @@ void vk_framework::draw_frame() {
 	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
 	update_uniform_buffer(image_index);
+
+	create_command_buffer(image_index);
 
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1163,10 +1136,13 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	//ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::mat4(1.0f);
-	ubo.view =
-		glm::lookAt(glm::vec3(0.f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	float d = 2.0f;
+
+	ubo.view = glm::lookAt(
+		glm::vec3(cosf(t) * d, d, sinf(t) * d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	ubo.proj = glm::perspective(
 		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);

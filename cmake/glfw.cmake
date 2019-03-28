@@ -1,3 +1,5 @@
+message("-- External Project: GLFW")
+
 if (WIN32)
 	set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
 	set(VULKAN_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include")
@@ -6,7 +8,6 @@ if (UNIX)
 	set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/lib/libvulkan.so")
 	set(VULKAN_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
 endif()
-
 
 if(NOT VULKAN_LIBRARY OR NOT VULKAN_INCLUDE_DIR)
 	message(FATAL_ERROR "Vulkan SDK not located!")
@@ -25,6 +26,7 @@ add_subdirectory("third_party/glfw")
 
 set(gfx_libraries
 	"glfw"
+	"assimp"
 	"${VULKAN_LIBRARY}")
 
 set(gfx_includes

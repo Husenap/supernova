@@ -14,6 +14,10 @@ set(src_engine
 	"src/engine/window.cpp"
 	"src/engine/window.h")
 
+set(src_model_loader
+	"src/engine/model_loader/model_loader.h"
+	"src/engine/model_loader/model_loader.cpp")
+
 set(src_vulkan
 	"src/engine/vulkan/vk_mem_utils.h"
 	"src/engine/vulkan/vk_sampler.cpp"
@@ -26,10 +30,12 @@ set(src_vulkan
 	"src/engine/vulkan/vk_buffer.h")
 
 set(src_files
+	"src/precompiled.cpp"
 	${src_precompiled}
 	${src_include}
 	${src_engine}
-	${src_vulkan})
+	${src_vulkan}
+	${src_model_loader})
 
 add_library(${target_name} STATIC ${src_files})
 
@@ -37,6 +43,7 @@ source_group("src\\precompiled" FILES ${src_precompiled})
 source_group("src\\include" FILES ${src_include})
 source_group("src\\engine" FILES ${src_engine})
 source_group("src\\engine\\vulkan" FILES ${src_vulkan})
+source_group("src\\model_loader" FILES ${src_model_loader})
 
 set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
@@ -50,7 +57,7 @@ target_link_libraries(${target_name} PUBLIC "supernova-utils-lib")
 target_link_libraries(${target_name} PUBLIC "supernova-coverage")
 
 target_include_directories(${target_name} PUBLIC
-	"../supernova-utils-lib/include"
+	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${gfx_includes})
 
 target_compile_features(${target_name} INTERFACE cxx_std_17)

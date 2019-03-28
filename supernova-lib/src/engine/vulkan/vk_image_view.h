@@ -1,9 +1,11 @@
 #pragma once
 
+#include "../../precompiled.h"
+
 namespace snova {
 class vk_image_view {
 public:
-	bool init(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
+	bool init(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags, uint32_t mip_levels = 1);
 
 	void destroy();
 
