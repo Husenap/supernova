@@ -5,7 +5,7 @@
 #include "vulkan/vk_image_view.h"
 #include "vulkan/vk_sampler.h"
 
-#include "model_loader/model_loader.h"
+#include "model-loader/model_loader.h"
 
 #include "../precompiled.h"
 
