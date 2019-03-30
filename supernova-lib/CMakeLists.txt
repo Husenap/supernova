@@ -15,8 +15,8 @@ set(src_engine
 	"src/engine/window.h")
 
 set(src_model_loader
-	"src/engine/model_loader/model_loader.h"
-	"src/engine/model_loader/model_loader.cpp")
+	"src/engine/model-loader/model_loader.h"
+	"src/engine/model-loader/model_loader.cpp")
 
 set(src_vulkan
 	"src/engine/vulkan/vk_mem_utils.h"
@@ -43,7 +43,7 @@ source_group("src\\precompiled" FILES ${src_precompiled})
 source_group("src\\include" FILES ${src_include})
 source_group("src\\engine" FILES ${src_engine})
 source_group("src\\engine\\vulkan" FILES ${src_vulkan})
-source_group("src\\model_loader" FILES ${src_model_loader})
+source_group("src\\model-loader" FILES ${src_model_loader})
 
 set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
