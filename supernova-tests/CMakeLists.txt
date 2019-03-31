@@ -5,6 +5,7 @@ set(src_utils
 	"src/utils/logger.cpp")
 
 set(src_engine
+	"src/engine/model_loader.cpp"
 	"src/engine/supernova.cpp")
 
 set(src_files

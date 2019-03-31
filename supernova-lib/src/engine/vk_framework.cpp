@@ -765,8 +765,7 @@ bool vk_framework::create_texture_image() {
 }
 
 bool vk_framework::create_model() {
-	m_model = m_model_loader.load_model("assets/models/vikingroom.fbx");
-	return true;
+	return m_model.load("assets/models/vikingroom.fbx");
 }
 
 bool vk_framework::create_uniform_buffers() {
@@ -906,8 +905,8 @@ bool vk_framework::create_command_buffer(uint32_t current_image) {
 	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
 	VkDeviceSize offsets[] = {0};
-	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model->m_vertex_buffer.get_buffer(), offsets);
-	vkCmdBindIndexBuffer(command_buffer, m_model->m_index_buffer.get_buffer(), 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model.get_vertex_buffer(), offsets);
+	vkCmdBindIndexBuffer(command_buffer, m_model.get_index_buffer(), 0, VK_INDEX_TYPE_UINT32);
 
 	vkCmdBindDescriptorSets(command_buffer,
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -918,7 +917,7 @@ bool vk_framework::create_command_buffer(uint32_t current_image) {
 							0,
 							nullptr);
 
-	vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(m_model->m_indices.size()), 1, 0, 0, 0);
+	vkCmdDrawIndexed(command_buffer, m_model.get_num_indices(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(command_buffer);
 
@@ -993,8 +992,7 @@ void vk_framework::destroy() {
 	m_texture_image_view.destroy();
 	m_texture_image.destroy();
 
-	m_model->m_vertex_buffer.destroy();
-	m_model->m_index_buffer.destroy();
+	m_model.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
