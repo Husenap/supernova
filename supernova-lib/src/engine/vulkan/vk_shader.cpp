@@ -41,4 +41,16 @@ bool vk_shader::load_shader_from_file(const char* filepath) {
 	return true;
 }
 void vk_shader::destroy() { vkDestroyShaderModule(vk_framework::get_device(), m_shader_module, nullptr); }
+
+VkPipelineShaderStageCreateInfo vk_shader::get_shader_stage_info(VkShaderStageFlagBits stage) const {
+	VkPipelineShaderStageCreateInfo shader_stage_info = {};
+
+	shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stage_info.stage = stage;
+	shader_stage_info.module = m_shader_module;
+	shader_stage_info.pName = "main";
+
+	return shader_stage_info;
+}
+
 }  // namespace snova

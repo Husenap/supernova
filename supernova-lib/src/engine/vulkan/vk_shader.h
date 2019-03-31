@@ -10,7 +10,10 @@ public:
 
 	void destroy();
 
-	const VkShaderModule& get_shader_module() { return m_shader_module; }
+	const VkShaderModule& get_shader_module() const { return m_shader_module; }
+
+	VkPipelineShaderStageCreateInfo get_shader_stage_info(VkShaderStageFlagBits stage) const;
+
 private:
 	VkShaderModule m_shader_module;
 };

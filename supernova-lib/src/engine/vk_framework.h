@@ -4,6 +4,7 @@
 #include "vulkan/vk_image.h"
 #include "vulkan/vk_image_view.h"
 #include "vulkan/vk_sampler.h"
+#include "vulkan/vk_graphics_pipeline.h"
 
 #include "model/model.h"
 
@@ -119,9 +120,8 @@ private:
 	std::vector<vk_image_view> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkPipelineLayout m_pipeline_layout;
 	VkRenderPass m_render_pass;
-	VkPipeline m_graphics_pipeline;
+	vk_graphics_pipeline m_graphics_pipeline;
 	VkCommandPool m_command_pool;
 	std::vector<VkCommandBuffer> m_command_buffers;
 
