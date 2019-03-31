@@ -11,8 +11,8 @@ environment:
   VULKAN_SDK: "C:/VulkanSDK/1.1.101.0"
 
 install:
-  - appveyor DownloadFile https://vulkan.lunarg.com/sdk/download/1.1.101.0/windows/VulkanSDK-1.1.101.0-Installer.exe -FileName vulkan.exe
-  - vulkan.exe /S
+  #- appveyor DownloadFile https://vulkan.lunarg.com/sdk/download/1.1.101.0/windows/VulkanSDK-1.1.101.0-Installer.exe -FileName vulkan.exe
+  #- vulkan.exe /S
 
   - cd %APPVEYOR_BUILD_FOLDER%
   - git submodule update --init --recursive
