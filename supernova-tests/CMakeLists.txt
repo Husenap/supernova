@@ -24,10 +24,10 @@ set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 
 add_custom_command(TARGET ${target_name}
 	PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_CURRENT_SOURCE_DIR}/res/
-	$<TARGET_FILE_DIR:${target_name}>/res/)
+	${CMAKE_CURRENT_SOURCE_DIR}/res
+	${CMAKE_CURRENT_BINARY_DIR}/res)
 
-set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>/")
+set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 gtest_discover_tests(${target_name})
 cotire(${target_name})
