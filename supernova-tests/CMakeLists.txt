@@ -22,5 +22,12 @@ target_link_libraries(${target_name} ${GTEST_MAIN_LIBRARY})
 
 set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 
+add_custom_command(TARGET ${target_name}
+	POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_CURRENT_SOURCE_DIR}/res/
+	$<TARGET_FILE_DIR:${target_name}>/res/)
+
+set_target_properties(${target_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${target_name}>/")
+
 gtest_discover_tests(${target_name})
 cotire(${target_name})
