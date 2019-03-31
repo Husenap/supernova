@@ -5,7 +5,7 @@
 #include "vulkan/vk_image_view.h"
 #include "vulkan/vk_sampler.h"
 
-#include "model-loader/model_loader.h"
+#include "model/model.h"
 
 #include "../precompiled.h"
 
@@ -126,8 +126,7 @@ private:
 	VkCommandPool m_command_pool;
 	std::vector<VkCommandBuffer> m_command_buffers;
 
-	model_loader m_model_loader;
-	std::unique_ptr<model_data_t> m_model;
+	model m_model;
 	std::vector<vk_buffer> m_uniform_buffers;
 
 	vk_image m_texture_image;

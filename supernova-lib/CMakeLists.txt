@@ -14,10 +14,6 @@ set(src_engine
 	"src/engine/window.cpp"
 	"src/engine/window.h")
 
-set(src_model_loader
-	"src/engine/model-loader/model_loader.h"
-	"src/engine/model-loader/model_loader.cpp")
-
 set(src_vulkan
 	"src/engine/vulkan/vk_mem_utils.h"
 	"src/engine/vulkan/vk_sampler.cpp"
@@ -29,12 +25,24 @@ set(src_vulkan
 	"src/engine/vulkan/vk_buffer.cpp"
 	"src/engine/vulkan/vk_buffer.h")
 
+set(src_model
+	"src/engine/model/model.cpp"
+	"src/engine/model/model.h"
+	"src/engine/model/model_data.h"
+	"src/engine/model/vertex_data.h")
+
+set(src_model_loader
+	"src/engine/model-loader/model_loader.h"
+	"src/engine/model-loader/model_loader.cpp")
+
+
 set(src_files
 	"src/precompiled.cpp"
 	${src_precompiled}
 	${src_include}
 	${src_engine}
 	${src_vulkan}
+	${src_model}
 	${src_model_loader})
 
 add_library(${target_name} STATIC ${src_files})
@@ -43,7 +51,8 @@ source_group("src\\precompiled" FILES ${src_precompiled})
 source_group("src\\include" FILES ${src_include})
 source_group("src\\engine" FILES ${src_engine})
 source_group("src\\engine\\vulkan" FILES ${src_vulkan})
-source_group("src\\model-loader" FILES ${src_model_loader})
+source_group("src\\engine\\model" FILES ${src_model})
+source_group("src\\engine\\model-loader" FILES ${src_model_loader})
 
 set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
