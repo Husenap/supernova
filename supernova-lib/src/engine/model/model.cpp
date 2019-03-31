@@ -7,6 +7,7 @@ bool model::load(const char* filepath) {
 	std::optional<model_data> model = model_loader::load_model(filepath);
 	if (!model.has_value()) {
 		ERROR_LOG("Failed to load model: %s", filepath);
+		return false;
 	}
 
 	m_model_data = model.value();
