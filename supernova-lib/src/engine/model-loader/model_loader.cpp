@@ -13,9 +13,8 @@ std::optional<snova::model_data> load_model(const char* filepath) {
 	}
 	in_file.close();
 
-	const aiScene* scene = importer.ReadFile(filepath,
-											 aiProcessPreset_TargetRealtime_Fast | aiProcess_Triangulate |
-												 aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
+	const aiScene* scene = importer.ReadFile(
+		filepath, aiProcessPreset_TargetRealtime_Fast | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
 	if (!scene) {
 		ERROR_LOG("Failed to load aiScene for: %s", filepath);
