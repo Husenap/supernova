@@ -22,7 +22,7 @@ artifacts:
 
 build_script:
   - echo build_script
-  - cmake . -A x64 -B .build
+  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES="$env:Configuration"
   - cmake --build .build
 test_script:
   - echo test_script
