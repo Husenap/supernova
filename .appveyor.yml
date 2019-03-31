@@ -9,6 +9,7 @@ configuration:
   - Release
 environment:
   VULKAN_SDK: "C:/VulkanSDK/1.1.101.0"
+
 install:
   - appveyor DownloadFile https://vulkan.lunarg.com/sdk/download/1.1.101.0/windows/VulkanSDK-1.1.101.0-Installer.exe -FileName vulkan.exe
   - vulkan.exe /S
@@ -21,8 +22,8 @@ artifacts:
     name: supernova-$env:Configuration
 
 build_script:
-  - echo build_script
-  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES="$env:Configuration"
+  - echo build_script - $env:Configuration
+  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES=$env:Configuration
   - cmake --build .build
 test_script:
   - echo test_script
