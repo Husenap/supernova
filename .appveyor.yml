@@ -23,8 +23,8 @@ artifacts:
 
 build_script:
   - echo build_script - %configuration%
-  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES=%configuration%
-  - cmake --build .build
+  - cmake . -A x64 -B .build
+  - cmake --build .build --config %configuration%
 test_script:
   - echo test_script
   - cd .build
