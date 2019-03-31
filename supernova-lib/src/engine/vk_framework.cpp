@@ -4,6 +4,8 @@
 
 #include "window.h"
 
+#include "vulkan/vk_shader.h"
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -103,7 +105,7 @@ void destroy_debug_utils_messenger_ext(VkInstance instance,
 }
 
 bool vk_framework::setup_debug_messenger() {
-	if(!check_validation_layer_support()){
+	if (!check_validation_layer_support()) {
 		WARNING_LOG("No support for validation layers, skipping!");
 		return true;
 	}
@@ -130,7 +132,8 @@ bool vk_framework::setup_debug_messenger() {
 }
 
 bool vk_framework::create_surface() {
-	VkResult result = glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface);
+	VkResult result =
+		glfwCreateWindowSurface(m_vk_instance, window::get_window_handle(), nullptr, &m_surface);
 	if (result != VK_SUCCESS) {
 		FATAL_LOG("Failed to create window surface: %d", result);
 		return false;
@@ -523,40 +526,27 @@ bool vk_framework::create_descriptor_set_layout() {
 	return true;
 }
 
-static std::vector<char> read_file(const std::string& filename) {
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		FATAL_LOG("Failed to open file");
-	}
-
-	size_t file_size = (size_t)file.tellg();
-	std::vector<char> buffer(file_size);
-
-	file.seekg(0);
-	file.read(buffer.data(), file_size);
-
-	file.close();
-
-	return buffer;
-}
 bool vk_framework::create_graphics_pipeline() {
-	auto vert_shader_code = read_file("assets/shaders/simple.vert.spv");
-	auto frag_shader_code = read_file("assets/shaders/simple.frag.spv");
+	vk_shader vertex_shader;
+	vk_shader fragment_shader;
 
-	VkShaderModule vert_shader_module = create_shader_module(vert_shader_code);
-	VkShaderModule frag_shader_module = create_shader_module(frag_shader_code);
+	if (!vertex_shader.load_shader_from_file("assets/shaders/simple.vert.spv")) {
+		return false;
+	}
+	if (!fragment_shader.load_shader_from_file("assets/shaders/simple.frag.spv")) {
+		return false;
+	}
 
 	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
 	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vert_shader_stage_info.module = vert_shader_module;
+	vert_shader_stage_info.module = vertex_shader.get_shader_module();
 	vert_shader_stage_info.pName = "main";
 
 	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
 	frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	frag_shader_stage_info.module = frag_shader_module;
+	frag_shader_stage_info.module = fragment_shader.get_shader_module();
 	frag_shader_stage_info.pName = "main";
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
@@ -668,25 +658,11 @@ bool vk_framework::create_graphics_pipeline() {
 		return false;
 	}
 
-	vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
-	vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
+	vertex_shader.destroy();
+	fragment_shader.destroy();
 
 	VERBOSE_LOG("Created graphics pipeline");
 	return true;
-}
-
-VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code) {
-	VkShaderModuleCreateInfo create_info = {};
-	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	create_info.codeSize = code.size();
-	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-	VkShaderModule shader_module;
-	if (vkCreateShaderModule(m_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-		FATAL_LOG("Failed to create shader module");
-	}
-
-	return shader_module;
 }
 
 bool vk_framework::create_framebuffers() {
@@ -764,9 +740,7 @@ bool vk_framework::create_texture_image() {
 	return true;
 }
 
-bool vk_framework::create_model() {
-	return m_model.load("assets/models/vikingroom.fbx");
-}
+bool vk_framework::create_model() { return m_model.load("assets/models/vikingroom.fbx"); }
 
 bool vk_framework::create_uniform_buffers() {
 	VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
