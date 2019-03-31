@@ -19,11 +19,11 @@ install:
 
 artifacts:
   - path: bin
-    name: supernova-$env:Configuration
+    name: supernova-%configuration%
 
 build_script:
-  - echo build_script - $env:Configuration
-  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES=$env:Configuration
+  - echo build_script - %configuration%
+  - cmake . -A x64 -B .build -DCMAKE_CONFIGURATION_TYPES=%configuration%
   - cmake --build .build
 test_script:
   - echo test_script
