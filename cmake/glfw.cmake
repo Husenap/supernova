@@ -1,7 +1,11 @@
 message("-- External Project: GLFW")
 
 if (WIN32)
-	set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
+	if (CMAKE_SIZEOF_VOID_P MATCHES "8")
+		set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/Lib/vulkan-1.lib")
+	else()
+		set(VULKAN_LIBRARY "$ENV{VULKAN_SDK}/Lib32/vulkan-1.lib")
+	endif()
 	set(VULKAN_INCLUDE_DIR "$ENV{VULKAN_SDK}/Include")
 endif()
 if (UNIX)
