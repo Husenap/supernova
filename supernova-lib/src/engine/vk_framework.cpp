@@ -22,25 +22,32 @@ vk_framework::vk_framework()
 vk_framework::~vk_framework() {}
 
 bool vk_framework::init() {
-	if (!create_vk_instance()) return false;
-	if (!create_surface()) return false;
-	if (!pick_physical_device()) return false;
-	if (!create_logical_device()) return false;
-	if (!create_swapchain()) return false;
-	if (!create_image_views()) return false;
-	if (!create_render_pass()) return false;
-	if (!create_descriptor_set_layout()) return false;
-	if (!create_graphics_pipeline()) return false;
-	if (!create_command_pool()) return false;
-	if (!create_depth_resources()) return false;
-	if (!create_framebuffers()) return false;
-	if (!create_texture_image()) return false;
-	if (!create_model()) return false;
-	if (!create_uniform_buffers()) return false;
-	if (!create_descriptor_pool()) return false;
-	if (!create_descriptor_sets()) return false;
-	if (!create_command_buffers()) return false;
-	if (!create_sync_objects()) return false;
+	// clang-format off
+	bool result = true
+		&& create_vk_instance()
+		&& create_surface()
+		&& pick_physical_device()
+		&& create_logical_device() 
+		&& create_swapchain() 
+		&& create_image_views() 
+		&& create_render_pass() 
+		&& create_descriptor_set_layout() 
+		&& create_graphics_pipeline() 
+		&& create_command_pool() 
+		&& create_depth_resources() 
+		&& create_framebuffers() 
+		&& create_texture_image() 
+		&& create_model() 
+		&& create_uniform_buffers() 
+		&& create_descriptor_pool() 
+		&& create_descriptor_sets() 
+		&& create_command_buffers() 
+		&& create_sync_objects();
+	// clang-format on
+
+	if (!result) {
+		return false;
+	}
 
 	window::register_resize_callback([& flag = m_framebuffer_resized](auto) { flag = true; });
 
@@ -653,6 +660,7 @@ bool vk_framework::create_model() {
 
 	return true;
 }
+
 
 bool vk_framework::create_uniform_buffers() {
 	VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
