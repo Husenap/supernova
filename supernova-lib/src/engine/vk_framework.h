@@ -28,6 +28,11 @@ struct uniform_buffer_object {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
+	glm::mat4 viewproj;
+	glm::mat4 inv_proj;
+	glm::mat4 inv_viewproj;
+	glm::vec4 time;
+	glm::vec4 camera_pos;
 };
 
 class vk_framework : public singleton<vk_framework> {
@@ -127,6 +132,8 @@ private:
 
 	model m_model;
 	std::vector<vk_buffer> m_uniform_buffers;
+
+	model m_quad;
 
 	vk_image m_texture_image;
 	vk_image_view m_texture_image_view;

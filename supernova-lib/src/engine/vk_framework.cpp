@@ -264,6 +264,7 @@ bool vk_framework::create_logical_device() {
 	}
 
 	VkPhysicalDeviceFeatures device_features = {};
+	device_features.shaderFloat64 = 1u;
 
 	VkDeviceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -633,7 +634,25 @@ bool vk_framework::create_texture_image() {
 	return true;
 }
 
-bool vk_framework::create_model() { return m_model.load("assets/models/vikingroom.fbx"); }
+bool vk_framework::create_model() {
+	model_data quad_data;
+	// clang-format off
+	quad_data.m_vertices = {
+		{{-1.f,+1.f,+0.f},{-1.f, +1.f}},
+		{{+1.f,+1.f,+0.f},{+1.f, +1.f}},
+		{{+1.f,-1.f,+0.f},{+1.f, -1.f}},
+		{{-1.f,-1.f,+0.f},{-1.f, -1.f}}
+	};
+	quad_data.m_indices = {0, 1, 2, 0, 2, 3};
+	// clang-format on
+	m_quad.load(quad_data);
+
+	if (!m_model.load("assets/models/vikingroom.fbx")) {
+		return false;
+	}
+
+	return true;
+}
 
 bool vk_framework::create_uniform_buffers() {
 	VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
@@ -780,10 +799,10 @@ bool vk_framework::create_command_buffer(uint32_t current_image) {
 							nullptr);
 
 	VkDeviceSize offsets[] = {0};
-	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model.get_vertex_buffer(), offsets);
-	vkCmdBindIndexBuffer(command_buffer, m_model.get_index_buffer(), 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_quad.get_vertex_buffer(), offsets);
+	vkCmdBindIndexBuffer(command_buffer, m_quad.get_index_buffer(), 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdDrawIndexed(command_buffer, m_model.get_num_indices(), 1, 0, 0, 0);
+	vkCmdDrawIndexed(command_buffer, m_quad.get_num_indices(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(command_buffer);
 
@@ -859,6 +878,7 @@ void vk_framework::destroy() {
 	m_texture_image.destroy();
 
 	m_model.destroy();
+	m_quad.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
@@ -999,17 +1019,28 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.model = glm::mat4(1.0f);
+	float d = 4.0f;
 
-	float d = 2.0f;
+	// ubo.model = glm::mat4(1.f);
 
-	ubo.view = glm::lookAt(
-		glm::vec3(cosf(t) * d, d, sinf(t) * d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.camera_pos = glm::vec4(cosf(t) * d, d, sinf(t) * d, 1.0);
+	ubo.camera_pos = glm::vec4(0.f, 1.5f * std::cosf(t), 5.f, 1.f);
 
-	ubo.proj = glm::perspective(
-		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
+	ubo.view = glm::lookAt(glm::vec3(ubo.camera_pos), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	ubo.proj = glm::perspective(glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
 	ubo.proj[1][1] *= -1.0f;
+
+	ubo.inv_proj = glm::inverse(ubo.proj);
+
+	ubo.viewproj =  glm::inverse(ubo.view) * ubo.proj;
+	ubo.inv_viewproj = glm::inverse(ubo.viewproj);
+
+	// ubo.view = glm::mat4(1.f);
+	// ubo.proj = glm::mat4(1.f);
+	// ubo.proj[1][1] *= -1.0f;
+
+	ubo.time.x = t;
 
 	m_uniform_buffers[current_image].set_data(&ubo);
 }
