@@ -7,6 +7,7 @@ namespace snova {
 class model {
 public:
 	bool load(const char* filepath);
+	bool load(const std::optional<model_data>& model);
 
 	void destroy();
 

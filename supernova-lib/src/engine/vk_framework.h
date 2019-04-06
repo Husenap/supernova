@@ -4,6 +4,7 @@
 #include "vulkan/vk_image.h"
 #include "vulkan/vk_image_view.h"
 #include "vulkan/vk_sampler.h"
+#include "vulkan/vk_graphics_pipeline.h"
 
 #include "model/model.h"
 
@@ -27,6 +28,11 @@ struct uniform_buffer_object {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
+	glm::mat4 viewproj;
+	glm::mat4 inv_proj;
+	glm::mat4 inv_viewproj;
+	glm::vec4 time;
+	glm::vec4 camera_pos;
 };
 
 class vk_framework : public singleton<vk_framework> {
@@ -72,7 +78,6 @@ private:
 	bool create_descriptor_set_layout();
 
 	bool create_graphics_pipeline();
-	VkShaderModule create_shader_module(const std::vector<char>& code);
 
 	bool create_framebuffers();
 
@@ -120,14 +125,15 @@ private:
 	std::vector<vk_image_view> m_swapchain_image_views;
 	std::vector<VkFramebuffer> m_swapchain_framebuffers;
 	VkDescriptorSetLayout m_descriptor_set_layout;
-	VkPipelineLayout m_pipeline_layout;
 	VkRenderPass m_render_pass;
-	VkPipeline m_graphics_pipeline;
+	vk_graphics_pipeline m_graphics_pipeline;
 	VkCommandPool m_command_pool;
 	std::vector<VkCommandBuffer> m_command_buffers;
 
 	model m_model;
 	std::vector<vk_buffer> m_uniform_buffers;
+
+	model m_quad;
 
 	vk_image m_texture_image;
 	vk_image_view m_texture_image_view;

@@ -4,6 +4,8 @@
 
 #include "window.h"
 
+#include "vulkan/vk_shader.h"
+
 const std::vector<const char*> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const std::vector<const char*> validation_layers = {"VK_LAYER_LUNARG_standard_validation"};
 
@@ -269,6 +271,7 @@ bool vk_framework::create_logical_device() {
 	}
 
 	VkPhysicalDeviceFeatures device_features = {};
+	device_features.shaderFloat64 = 1u;
 
 	VkDeviceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -531,170 +534,36 @@ bool vk_framework::create_descriptor_set_layout() {
 	return true;
 }
 
-static std::vector<char> read_file(const std::string& filename) {
-	std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-	if (!file.is_open()) {
-		FATAL_LOG("Failed to open file");
-	}
-
-	size_t file_size = (size_t)file.tellg();
-	std::vector<char> buffer(file_size);
-
-	file.seekg(0);
-	file.read(buffer.data(), file_size);
-
-	file.close();
-
-	return buffer;
-}
 bool vk_framework::create_graphics_pipeline() {
-	auto vert_shader_code = read_file("assets/shaders/simple.vert.spv");
-	auto frag_shader_code = read_file("assets/shaders/simple.frag.spv");
+	vk_shader vertex_shader;
+	vk_shader fragment_shader;
 
-	VkShaderModule vert_shader_module = create_shader_module(vert_shader_code);
-	VkShaderModule frag_shader_module = create_shader_module(frag_shader_code);
-
-	VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
-	vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vert_shader_stage_info.module = vert_shader_module;
-	vert_shader_stage_info.pName = "main";
-
-	VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
-	frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	frag_shader_stage_info.module = frag_shader_module;
-	frag_shader_stage_info.pName = "main";
-
-	VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
-
-	auto binding_description = vertex_data::get_binding_description();
-	auto attribute_descriptions = vertex_data::get_attribute_descriptions();
-
-	VkPipelineVertexInputStateCreateInfo vertex_input_state = {};
-	vertex_input_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_state.vertexBindingDescriptionCount = 1;
-	vertex_input_state.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
-	vertex_input_state.pVertexBindingDescriptions = &binding_description;
-	vertex_input_state.pVertexAttributeDescriptions = attribute_descriptions.data();
-
-	VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {};
-	input_assembly_state.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	input_assembly_state.primitiveRestartEnable = VK_FALSE;
-
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)m_swapchain_extent.width;
-	viewport.height = (float)m_swapchain_extent.height;
-	viewport.minDepth = 0.f;
-	viewport.maxDepth = 1.f;
-
-	VkRect2D scissor = {};
-	scissor.offset = {0, 0};
-	scissor.extent = m_swapchain_extent;
-
-	VkPipelineViewportStateCreateInfo viewport_state = {};
-	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewport_state.viewportCount = 1;
-	viewport_state.pViewports = &viewport;
-	viewport_state.scissorCount = 1;
-	viewport_state.pScissors = &scissor;
-
-	VkPipelineRasterizationStateCreateInfo rasterizer = {};
-	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterizer.depthClampEnable = VK_FALSE;
-	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterizer.lineWidth = 1.0f;
-	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-	rasterizer.depthBiasEnable = VK_FALSE;
-
-	VkPipelineMultisampleStateCreateInfo multisampling = {};
-	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	VkPipelineDepthStencilStateCreateInfo depth_stencil = {};
-	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depth_stencil.depthTestEnable = VK_TRUE;
-	depth_stencil.depthWriteEnable = VK_TRUE;
-	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depth_stencil.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil.stencilTestEnable = VK_FALSE;
-
-	VkPipelineColorBlendAttachmentState color_blend_attachment = {};
-	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-											VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	color_blend_attachment.blendEnable = VK_FALSE;
-
-	VkPipelineColorBlendStateCreateInfo color_blending = {};
-	color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blending.logicOpEnable = VK_FALSE;
-	color_blending.attachmentCount = 1;
-	color_blending.pAttachments = &color_blend_attachment;
-
-	/*
-	VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
-
-	VkPipelineDynamicStateCreateInfo dynamic_state = {};
-	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamic_state.dynamicStateCount = 2;
-	dynamic_state.pDynamicStates = dynamic_states;
-	*/
-
-	VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &m_descriptor_set_layout;
-	if (vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
-		FATAL_LOG("Failed to create pipeline layout!");
+	if (!vertex_shader.load_shader_from_file("assets/shaders/simple.vert.spv")) {
+		return false;
+	}
+	if (!fragment_shader.load_shader_from_file("assets/shaders/simple.frag.spv")) {
 		return false;
 	}
 
-	VkGraphicsPipelineCreateInfo pipeline_info = {};
-	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipeline_info.stageCount = 2;
-	pipeline_info.pStages = shader_stages;
-	pipeline_info.pVertexInputState = &vertex_input_state;
-	pipeline_info.pInputAssemblyState = &input_assembly_state;
-	pipeline_info.pViewportState = &viewport_state;
-	pipeline_info.pRasterizationState = &rasterizer;
-	pipeline_info.pMultisampleState = &multisampling;
-	pipeline_info.pDepthStencilState = &depth_stencil;
-	pipeline_info.pColorBlendState = &color_blending;
-	pipeline_info.layout = m_pipeline_layout;
-	pipeline_info.renderPass = m_render_pass;
-	pipeline_info.subpass = 0;
+	graphics_pipeline_create_info graphics_pipeline_info;
+	graphics_pipeline_info.m_shader_stages.push_back(
+		vertex_shader.get_shader_stage_info(VK_SHADER_STAGE_VERTEX_BIT));
+	graphics_pipeline_info.m_shader_stages.push_back(
+		fragment_shader.get_shader_stage_info(VK_SHADER_STAGE_FRAGMENT_BIT));
+	graphics_pipeline_info.m_extent = m_swapchain_extent;
+	graphics_pipeline_info.m_descriptor_set_layout = m_descriptor_set_layout;
+	graphics_pipeline_info.m_render_pass = m_render_pass;
 
-	if (vkCreateGraphicsPipelines(
-			m_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline)) {
+	if (!m_graphics_pipeline.create_pipeline(graphics_pipeline_info)) {
 		FATAL_LOG("Failed to create graphics pipeline!");
 		return false;
 	}
 
-	vkDestroyShaderModule(m_device, vert_shader_module, nullptr);
-	vkDestroyShaderModule(m_device, frag_shader_module, nullptr);
+	vertex_shader.destroy();
+	fragment_shader.destroy();
 
 	VERBOSE_LOG("Created graphics pipeline");
 	return true;
-}
-
-VkShaderModule vk_framework::create_shader_module(const std::vector<char>& code) {
-	VkShaderModuleCreateInfo create_info = {};
-	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	create_info.codeSize = code.size();
-	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-	VkShaderModule shader_module;
-	if (vkCreateShaderModule(m_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
-		FATAL_LOG("Failed to create shader module");
-	}
-
-	return shader_module;
 }
 
 bool vk_framework::create_framebuffers() {
@@ -772,7 +641,26 @@ bool vk_framework::create_texture_image() {
 	return true;
 }
 
-bool vk_framework::create_model() { return m_model.load("assets/models/vikingroom.fbx"); }
+bool vk_framework::create_model() {
+	model_data quad_data;
+	// clang-format off
+	quad_data.m_vertices = {
+		{{-1.f,+1.f,+0.f},{-1.f, +1.f}},
+		{{+1.f,+1.f,+0.f},{+1.f, +1.f}},
+		{{+1.f,-1.f,+0.f},{+1.f, -1.f}},
+		{{-1.f,-1.f,+0.f},{-1.f, -1.f}}
+	};
+	quad_data.m_indices = {0, 1, 2, 0, 2, 3};
+	// clang-format on
+	m_quad.load(quad_data);
+
+	if (!m_model.load("assets/models/vikingroom.fbx")) {
+		return false;
+	}
+
+	return true;
+}
+
 
 bool vk_framework::create_uniform_buffers() {
 	VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
@@ -908,22 +796,21 @@ bool vk_framework::create_command_buffer(uint32_t current_image) {
 
 	vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
-
-	VkDeviceSize offsets[] = {0};
-	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_model.get_vertex_buffer(), offsets);
-	vkCmdBindIndexBuffer(command_buffer, m_model.get_index_buffer(), 0, VK_INDEX_TYPE_UINT32);
-
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline.get_pipeline());
 	vkCmdBindDescriptorSets(command_buffer,
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							m_pipeline_layout,
+							m_graphics_pipeline.get_pipeline_layout(),
 							0,
 							1,
 							&m_descriptor_sets[current_image],
 							0,
 							nullptr);
 
-	vkCmdDrawIndexed(command_buffer, m_model.get_num_indices(), 1, 0, 0, 0);
+	VkDeviceSize offsets[] = {0};
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, &m_quad.get_vertex_buffer(), offsets);
+	vkCmdBindIndexBuffer(command_buffer, m_quad.get_index_buffer(), 0, VK_INDEX_TYPE_UINT32);
+
+	vkCmdDrawIndexed(command_buffer, m_quad.get_num_indices(), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(command_buffer);
 
@@ -999,6 +886,7 @@ void vk_framework::destroy() {
 	m_texture_image.destroy();
 
 	m_model.destroy();
+	m_quad.destroy();
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
 		vkDestroySemaphore(m_device, m_image_available_semaphores[i], nullptr);
@@ -1091,8 +979,7 @@ void vk_framework::destroy_swapchain() {
 	vkFreeCommandBuffers(
 		m_device, m_command_pool, static_cast<uint32_t>(m_command_buffers.size()), m_command_buffers.data());
 
-	vkDestroyPipeline(m_device, m_graphics_pipeline, nullptr);
-	vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+	m_graphics_pipeline.destroy();
 	vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 
 	for (auto image_view : m_swapchain_image_views) image_view.destroy();
@@ -1140,17 +1027,28 @@ void vk_framework::update_uniform_buffer(uint32_t current_image) {
 
 	uniform_buffer_object ubo = {};
 
-	// ubo.model = glm::rotate(glm::mat4(1.0f), t * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.model = glm::mat4(1.0f);
+	float d = 4.0f;
 
-	float d = 2.0f;
+	// ubo.model = glm::mat4(1.f);
 
-	ubo.view = glm::lookAt(
-		glm::vec3(cosf(t) * d, d, sinf(t) * d), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.camera_pos = glm::vec4(cosf(t) * d, d, sinf(t) * d, 1.0);
+	ubo.camera_pos = glm::vec4(0.f, 1.5f * std::cosf(t), 5.f, 1.f);
 
-	ubo.proj = glm::perspective(
-		glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
+	ubo.view = glm::lookAt(glm::vec3(ubo.camera_pos), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	ubo.proj = glm::perspective(glm::radians(90.0f), m_swapchain_extent.width / (float)m_swapchain_extent.height, 0.1f, 10.f);
 	ubo.proj[1][1] *= -1.0f;
+
+	ubo.inv_proj = glm::inverse(ubo.proj);
+
+	ubo.viewproj =  glm::inverse(ubo.view) * ubo.proj;
+	ubo.inv_viewproj = glm::inverse(ubo.viewproj);
+
+	// ubo.view = glm::mat4(1.f);
+	// ubo.proj = glm::mat4(1.f);
+	// ubo.proj[1][1] *= -1.0f;
+
+	ubo.time.x = t;
 
 	m_uniform_buffers[current_image].set_data(&ubo);
 }
