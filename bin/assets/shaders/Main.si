@@ -1,0 +1,23 @@
+#ifndef _MAIN_GUARD
+#define _MAIN_GUARD
+
+struct VertexInput
+{
+	float4 myPosition : POSITION;
+	float2 myUV : UV;
+};
+
+struct PixelInput
+{
+	float4 myPosition : SV_POSITION;
+	float2 myUV : UV;
+};
+
+struct PixelOutput
+{
+	float4 myColor : SV_TARGET;
+};
+
+#include "Utils.si"
+
+#endif

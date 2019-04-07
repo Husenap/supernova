@@ -1,0 +1,104 @@
+#include "Main.si"
+#include "SDF.si"
+#include "Grid.si"
+
+float FDebugPlane(in float3 p)
+{
+	return FPlane(p, float3(0.f, 1.f, 0.f), 0.f);
+}
+
+const static float numSteps = 3.f;
+const static float maxDistance = 100.f;
+const static float invNumSteps = 1/numSteps;
+const static float linePower = 10.f;
+const static float minusLinePower = 1.f;
+const static float gradientLength = 15.f;
+
+float C(float x)
+{
+	return (1.f - pow(1.f - saturate(x), 8.f)*(numSteps-1)/numSteps);
+}
+
+float3 Gradient(in float f)
+{
+	const static float3 startColor = float3(0.25f, 0.03f, 0.38f);
+	const static float3 midColor = float3(0.53f, 0.33f, 0.07f);
+	const static float3 endColor = 0.95f;
+
+	f = saturate(f);
+	if(f < 0.5f)
+	{
+		return lerp(
+			startColor,
+			midColor,
+			f * 2.f
+		);
+	}
+	else
+	{
+		return lerp(
+			midColor,
+			endColor,
+			f * 2.f - 1.f
+		);
+	}
+}
+
+void SetDebugColors(
+	in float3 startPosition,
+	in float3 p,
+	in float t,
+	inout PixelOutput output
+) {
+#ifdef DEBUG_GRID
+	output.myAlbedo.rgb *= GridColor(p, output.myNormal.xyz);
+#endif
+#ifdef DEBUG_PLANE
+	if(startPosition.y <= 0.f)
+	{
+		return;
+	}
+	float dist = SceneDistance(p);
+	if(FDebugPlane(p) < SceneDistance(p))
+	{
+		output.myNormal = float4(
+			float3(0.f, 1.f, 0.f),
+			DepthFromPosition(p)
+		);
+
+		const float y1 = C(t / maxDistance);
+		const float y2 = floor(y1*numSteps)*invNumSteps;
+		const float y3 = saturate(y2 + invNumSteps);
+		const float alpha = saturate((y1-y2)*numSteps);
+
+		float3 color1, color2;
+		float f, lineDistance;
+
+
+		f = dist/(y2*gradientLength);
+		color1 = Gradient(f);
+		lineDistance = dist * pow(
+			linePower,
+			saturate(1.f-y2) * numSteps - minusLinePower
+		);
+		color1 *= smoothstep(0.0f, 0.2f, abs(2.f*fmod(lineDistance-0.5f, 1.f)-1.f));
+
+		f = dist/(y3*gradientLength);
+		color2 = Gradient(f);
+		lineDistance = dist * pow(
+			linePower,
+			saturate(1.f-y3) * numSteps - minusLinePower
+		);
+		color2 *= smoothstep(0.0f, 0.2f, abs(2.f*fmod(lineDistance-0.5f, 1.f)-1.f));
+
+		output.myAlbedo.rgb = lerp(
+			color1,
+			color2,
+			smoothstep(0.1f, 1.f, alpha)
+		);
+		output.myRMA.rgb = float3(1.f, 0.f, 1.f);
+	}
+#endif
+}
+
+

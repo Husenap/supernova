@@ -1,0 +1,471 @@
+#ifndef _SDF_GUARD
+#define _SDF_GUARD
+
+//*================================*
+//*== HELPER FUNCTIONS / DEFINES ==*
+//*================================*
+
+const static float PI = 3.1415926535898f;
+const static float TAU = (2.0f*PI);
+const static float PHI = (sqrt(5.f)*0.5f + 0.5f);
+
+float Mod(in float x, in float y)
+{
+	return x - y * floor(x/y);
+}
+float2 Mod(in float2 x, in float2 y)
+{
+	return x - y * floor(x/y);
+}
+float3 Mod(in float3 x, in float3 y)
+{
+	return x - y * floor(x/y);
+}
+
+float Sgn(in float x)
+{
+	return (x<0.f)?-1.f:1.f;
+}
+float2 Sgn(in float2 v)
+{
+	return float2(
+		(v.x<0.f)?-1.f:1.f,
+		(v.y<0.f)?-1.f:1.f
+	);
+}
+
+float Square(in float x)
+{
+	return x*x;
+}
+float2 Square(in float2 x)
+{
+	return x*x;
+}
+float3 Square(in float3 x)
+{
+	return x*x;
+}
+
+float LengthSqr(in float3 v)
+{
+	return dot(v, v);
+}
+
+float Vmax(in float2 v)
+{
+	return max(v.x, v.y);
+}
+float Vmax(in float3 v)
+{
+	return max(v.x, max(v.y, v.z));
+}
+float Vmax(in float4 v)
+{
+	return max(max(v.x, v.y), max(v.z, v.w));
+}
+float Vmin(in float2 v)
+{
+	return min(v.x, v.y);
+}
+float Vmin(in float3 v)
+{
+	return min(v.x, min(v.y, v.z));
+}
+float Vmin(in float4 v)
+{
+	return min(min(v.x, v.y), min(v.z, v.w));
+}
+
+//*==================================*
+//*== Primitive Distance Functions ==*
+//*==================================*
+
+float FSphere(in float3 p, in float r)
+{
+	return length(p) - r;
+}
+
+float FPlane(in float3 p, in float3 n, in float d)
+{
+	return dot(p, n) - d;
+}
+
+float FBoxCheap(in float3 p, in float3 b)
+{
+	return Vmax(abs(p) - b);
+}
+
+float FBox(in float3 p, in float3 b)
+{
+	float3 d = abs(p) - b;
+	return length(max(d, 0.f)) + Vmax(min(d, 0.f));
+}
+
+float FBoxRound(in float3 p, in float3 b, in float r)
+{
+	return FBox(p, b-r) - r;
+}
+
+float FBox2Cheap(in float2 p, in float2 b)
+{
+	return Vmax(abs(p) - b);
+}
+
+float FBox2(in float2 p, in float2 b)
+{
+	float2 d = abs(p) - b;
+	return length(max(d, 0.f)) + Vmax(min(d, 0.f));
+}
+
+float FCorner(in float2 p)
+{
+	return length(max(p, 0.f)) + Vmax(min(p, 0.f));
+}
+
+float FBlob(in float3 p)
+{
+	p = abs(p);
+	if(p.x < max(p.y, p.z)) p = p.yzx;
+	if(p.x < max(p.y, p.z)) p = p.yzx;
+	float b = max(max(max(
+		dot(p, normalize(1.f.xxx)),
+		dot(p.xz, normalize(float2(PHI+1.f, 1.f)))),
+		dot(p.yx, normalize(float2(1.f, PHI)))),
+		dot(p.xz, normalize(float2(1.f, PHI))));
+	float l = length(p);
+	return l - 1.5f - 0.2f * (1.5f/2.f)*cos(min(sqrt(1.01f-b/l)*(PI*4.f), PI));
+}
+
+
+float FCylinder(in float3 p, in float r, in float h)
+{
+	return max(length(p.xz) - r, abs(p.y) - h);
+}
+
+float FCapsule(in float3 p, in float r, in float c)
+{
+	return lerp(
+		length(p.xz) - r,
+		length(float3(p.x, abs(p.y)-c, p.z)) - r,
+		step(c, abs(p.y))
+	);
+}
+
+float FLineSegment(in float3 p, in float3 a, in float3 b, in float r)
+{
+	float3 ab = b-a;
+	float t = saturate(dot(p-a, ab)/dot(ab, ab));
+	return length((ab*t + a) - p) - r;
+}
+
+float FTorus(in float3 p, float smallRadius, float largeRadius)
+{
+	return length(float2(length(p.xz) - largeRadius, p.y)) - smallRadius;
+}
+
+float FCircle(in float3 p, float r)
+{
+	float l = length(p.xz) - r;
+	return length(float2(p.y, l)) - 1e-3;
+}
+
+float FDisc(in float3 p, float r)
+{
+	float l = length(p.xz) - r;
+	return (l < 0.f ? abs(p.y) : length(float2(p.y, l))) - 1e-5;
+}
+
+float FHexagonCircumcircle(in float3 p, in float r, in float h)
+{
+	float3 q = abs(p);
+
+	return max(
+		q.y - h,
+		max(
+			q.x*sqrt(3.f)*0.5f + q.z*0.5f,
+			q.z
+		) - r
+	);
+}
+
+float FHexagonIncircle(in float3 p, in float r, in float h)
+{
+	return FHexagonCircumcircle(p, r*sqrt(3.f)*0.5f, h);
+}
+
+//*===================================*
+//*== Domain Manipulation Operators ==*
+//*===================================*
+
+void Rotate(inout float2 p, in float a)
+{
+	p = cos(a)*p + sin(a)*float2(p.y, -p.x);
+}
+void R45(inout float2 p)
+{
+	p = (p + float2(p.y, -p.x))*sqrt(0.5f);
+}
+
+float Mod1(inout float p, in float size)
+{
+	float halfSize = size * 0.5f;
+	float c = floor((p+halfSize)/size);
+	p = Mod(p + halfSize, size) - halfSize;
+	return c;
+}
+
+float ModMirror1(inout float p, in float size)
+{
+	float halfSize = size * 0.5f;
+	float c = floor((p+halfSize)/size);
+	p = Mod(p + halfSize, size) - halfSize;
+	p *=  Mod(c, 2.f) * 2.f - 1.f;
+	return c;
+}
+
+float ModSingle1(inout float p, in float size)
+{
+	float halfSize = size * 0.5f;
+	float c = floor((p + halfSize)/size);
+	if(p >= 0.f)
+	{
+		p = Mod(p + halfSize, size) - halfSize;
+	}
+	return c;
+}
+
+float ModInterval1(inout float p, in float size, in float start, in float stop)
+{
+	float halfSize = size * 0.5f;
+	float c = floor((p+halfSize)/size);
+	p = Mod(p+halfSize, size) - halfSize;
+	if(c > stop)
+	{
+		p += size*(c - stop);
+		c = stop;
+	}
+	if(c < start)
+	{
+		p += size*(c-start);
+		c = start;
+	}
+	return c;
+}
+
+float ModPolar(inout float2 p, in float repititions)
+{
+	float angle = 2.f * PI / repititions;
+	float a = atan2(p.y, p.x) + angle/2.f;
+	float r = length(p);
+	float c = floor(a/angle);
+	a = Mod(a, angle) - angle/2.f;
+	p = float2(cos(a), sin(a)) * r;
+
+	if(abs(c) >= repititions/2.f) c = abs(c);
+	return c;
+}
+
+float2 Mod2(inout float2 p, in float2 size)
+{
+	float2 halfSize = size * 0.5f;
+	float2 c = floor((p + halfSize) / size);
+	p = Mod(p + halfSize, size) - halfSize;
+	return c;
+}
+
+float2 ModMirror2(inout float2 p, in float2 size)
+{
+	float2 halfSize = size * 0.5f;
+	float2 c = floor((p + halfSize) / size);
+	p = Mod(p + halfSize, size) - halfSize;
+	p *= Mod(c, 2.f) * 2.f - 1.f;
+	return c;
+}
+
+float3 Mod3(inout float3 p, in float3 size)
+{
+	float3 halfSize = size * 0.5f;
+	float3 c = floor((p + halfSize) / size);
+	p = Mod(p + halfSize, size) - halfSize;
+	return c;
+}
+
+float Mirror(inout float p, in float dist)
+{
+	float s = Sgn(p);
+	p = abs(p) - dist;
+	return s;
+}
+
+float MirrorOctant(inout float2 p, in float2 dist)
+{
+	float s = Sgn(p);
+	Mirror(p.x, dist.x);
+	Mirror(p.y, dist.y);
+	if(p.y > p.x)
+	{
+		p.xy = p.yx;
+	}
+	return s;
+}
+
+float Reflect(inout float3 p, in float3 planeNormal, float offset)
+{
+	float t = dot(p, planeNormal) + offset;
+	if(t < 0.f)
+	{
+		p = p - (2.f * t) * planeNormal;
+	}
+	return Sgn(t);
+}
+
+//*==================================*
+//*== Object Combination Operators ==*
+//*==================================*
+
+float OpUnion(in float a, in float b)
+{
+	return min(a, b);
+}
+float OpIntersection(in float a, in float b)
+{
+	return max(a, b);
+}
+float OpDifference(in float a, in float b)
+{
+	return max(a, -b);
+}
+
+float OpUnionChamfer(in float a, in float b, in float r)
+{
+	return min(min(a, b), (a-r+b)*sqrt(0.5f));
+}
+float OpIntersectionChamfer(in float a, in float b, in float r)
+{
+	return max(OpIntersection(a, b), (a+r+b)*sqrt(0.5f));
+}
+float OpDifferenceChamfer(in float a, in float b, in float r)
+{
+	return OpIntersectionChamfer(a, -b, r);
+}
+
+float OpUnionRound(in float a, in float b, in float r)
+{
+	float2 u = max(float2(r-a, r-b), float2(0.f, 0.f));
+	return max(r, min(a, b)) - length(u);
+}
+float OpIntersectionRound(in float a, in float b, in float r)
+{
+	float2 u = max(float2(r+a, r+b), 0.f);
+	return min(-r, OpIntersection(a, b)) + length(u);
+}
+float OpDifferenceRound(in float a, in float b, in float r)
+{
+	return OpIntersectionRound(a, -b, r);
+}
+
+float OpUnionColumns(in float a, in float b, in float r, in float n)
+{
+	float2 p = float2(a, b);
+	float columnRadius = r * sqrt(2.f) / ((n-1)*2.f+sqrt(2.f));
+
+	R45(p);
+
+	p.x -= sqrt(2.f)/2.f*r;
+	p.x += columnRadius*sqrt(2.f);
+
+	if(Mod(n,2.f) == 1.f)
+	{
+		p.y += columnRadius;
+	}
+
+	Mod1(p.y, columnRadius * 2.f);
+
+	float result = length(p) - columnRadius;
+	result = min(result, p.x);
+	result = min(result, a);
+	return min(result, b);
+}
+
+float OpDifferenceColumns(in float a, in float b, in float r, in float n)
+{
+	a = -a;
+	float m = min(a, b);
+
+	if((a < r) && (b < r))
+	{
+		float2 p = float2(a, b);
+		float columnRadius = r * sqrt(2.f) / ((n-1)*2.f+sqrt(2.f));
+
+		R45(p);
+
+		p.y += columnRadius;
+		p.x -= sqrt(2.f)/2.f*r;
+		p.x += -columnRadius*sqrt(2.f)/2.f;
+
+		if(Mod(n,2.f) == 1.f)
+		{
+			p.y += columnRadius;
+		}
+
+		Mod1(p.y, columnRadius * 2.f);
+
+		float result = -length(p) + columnRadius;
+		result = max(result, p.x);
+		result = min(result, a);
+		return -min(result, b);
+	}
+	else
+	{
+		return -m;
+	}
+}
+
+float OpIntersectionColumns(in float a, in float b, in float r, in float n)
+{
+	return OpDifferenceColumns(a, -b, r, n);
+}
+
+float OpUnionStairs(in float a, in float b, in float r, in float n)
+{
+	float s = r/n;
+	float u = b-r;
+	return min(min(a, b), 0.5f * (u + a + abs((Mod(u-a+s, 2.f * s)) - s)));
+}
+float OpIntersectionStairs(in float a, in float b, in float r, in float n)
+{
+	return -OpUnionStairs(-a, -b, r, n);
+}
+float OpDifferenceStairs(in float a, in float b, in float r, in float n)
+{
+	return -OpUnionStairs(-a, b, r, n);
+}
+
+float OpUnionSoft(in float a, in float b, in float r)
+{
+	float e = max(r - abs(a - b), 0.f);
+	return min(a, b) - e*e*0.25f/r;
+}
+
+float OpPipe(in float a, in float b, in float r)
+{
+	return length(float2(a, b)) - r;
+}
+
+float OpEngrave(in float a, in float b, in float r)
+{
+	return max(a, (a + r - abs(b)) * sqrt(0.5f));
+}
+
+float OpGroove(in float a, in float b, in float ra, in float rb)
+{
+	return max(a, min(a + ra, rb - abs(b)));
+}
+
+float OpTongue(in float a, in float b, in float ra, in float rb)
+{
+	return min(a, max(a - ra, abs(b) - rb));
+}
+
+#endif

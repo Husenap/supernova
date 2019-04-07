@@ -1,0 +1,41 @@
+cbuffer ConstantData : register(b0)
+{
+	float4x4 cameraOrientation;
+	float4x4 toCamera;
+	float4x4 toProjection;
+	float4x4 invertedProjection;
+	float4x4 viewProjection;
+	float4x4 invertedViewProjection;
+	float time;
+	float3 CustomData_trash;
+}
+
+float3 PosFromMatrix(in float4x4 aMatrix)
+{
+	return float3(aMatrix._14, aMatrix._24, aMatrix._34);
+}
+
+float3 DirectionForPixel(in float2 aUV)
+{
+	float4 position;
+	position.x = aUV.x * 2.f - 1.f;
+	position.y = (1.f - aUV.y) * 2.f - 1.f;
+	position.z = 1.f;
+	position.w = 1.f;
+
+	position = mul(invertedViewProjection, position);
+
+	float3 worldPosition = position.xyz / position.w;
+
+	float3 cameraPosition = PosFromMatrix(cameraOrientation);
+
+	return normalize(worldPosition - cameraPosition);
+}
+
+float DepthFromPosition(in float3 aPosition)
+{
+	float4 position = float4(aPosition, 1.f);
+	float4 projection = mul(viewProjection, position);
+
+	return projection.z / projection.w;
+}

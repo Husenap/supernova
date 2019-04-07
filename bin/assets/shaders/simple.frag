@@ -6,8 +6,6 @@
 #define FAR_PLANE 100.0
 #define SKY_COLOR vec4(0.1, 0.15, 0.2, 1.0)
 
-layout(binding = 1) uniform sampler2D texSampler;
-
 layout(location = 0) in vec2 fragTexCoord;
 layout(location = 1) in float time;
 layout(location = 2) in vec3 camera_pos;

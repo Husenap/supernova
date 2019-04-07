@@ -1,0 +1,111 @@
+//#define DEBUG_PLANE
+//#define DEBUG_GRID
+//#define DEBUG_COST
+
+#include "Main.si"
+
+#define MAX_STEPS (100 + time * 10 + 50 * cos(time))
+
+#define dfloat2 vector<double, 2>
+
+float3 mandelbrot(in float2 uv){
+	dfloat2 z, c;
+
+	float t = time;
+	double scale = pow(2.0, t);
+
+	//dfloat2 center = dfloat2(-0.1010963125, 0.9562863125);
+	//dfloat2 center = dfloat2(-0.2511000019201, -0.6360000798665);
+	//dfloat2 center = dfloat2(-0.77568379, 0.13646737);
+	//dfloat2 center = dfloat2(-0.7374657262602481,0.20830362722338644);
+	dfloat2 center = dfloat2(-1.7864477356221002,0);
+
+
+	c.x = lerp(-2.0, 1.0, uv.x) / scale + center.x;
+	c.y = lerp(-1.0, 1.0, uv.y) / scale + center.y;
+
+	double x = 0.0;
+	double y = 0.0;
+	double xtemp = 0.0;
+	int i = 0;
+	while(x*x+y*y <= 4.0 && i < MAX_STEPS){
+		xtemp = x*x - y*y + c.x;
+		y = 2*x*y + c.y;
+		x = xtemp;
+		++i;
+	}
+
+	float a = (1.0/MAX_STEPS) * i;
+	//a = 1.0 - pow(1.0 - 2.0*a, 2.0);
+	float a1 = 0.5 + 0.5 * cos(a * 25.0+2.342);
+	float a2 = 0.5 + 0.5 * cos(a * 21.3+5.1242);
+	a = 0.5 + 0.5 * cos(a * 23.7);
+	return float3(
+		a,
+		a1,
+		a2
+	);
+}
+
+PixelOutput main(PixelInput input)
+{
+	PixelOutput output = (PixelOutput)0;
+
+	output.myColor.rgb = mandelbrot(input.myUV);
+	//output.myColor.rgb = 0.5+0.5*cos(input.myUV.x*5.0+time);
+	output.myColor.a = 1.0;
+
+
+	/*
+	float3 startPosition = PosFromMatrix(cameraOrientation);
+
+	float3 direction = DirectionForPixel(input.myUV);
+
+	float t0 = 0.f;
+	int i = 0;
+	RayMarch(startPosition, direction, i, t0);
+
+	if(t0 >= globalFar)
+	{
+		discard;
+	}
+
+	float3 p = startPosition + direction * t0;
+
+	output.myNormal = float4(
+		CalculateNormal(p),
+		DepthFromPosition(p)
+	);
+	output.myColor.a = 1.f;
+	output.myColor.rgb = 1.f - (t0/globalFar)*0.75f;
+	output.myColor.rgb = 0.85f;
+	output.myColor.rgb = float3(1.f, 0.3f, 0.4f);
+
+#ifdef DEBUG_COST
+	float cost = saturate((float)i/(float)globalNumSteps);
+
+	if(cost < 0.5f)
+	{
+		output.myColor = lerp(
+			float3(0.f, 0.f, 1.f),
+			float3(0.f, 1.f, 0.f),
+			cost*2.f
+		);
+	}
+	else
+	{
+		output.myColor = lerp(
+			float3(0.f, 0.f, 1.f),
+			float3(1.f, 0.f, 0.f),
+			cost*2.f-1.f
+		);
+	}
+#endif
+
+#if defined(DEBUG_PLANE) || defined(DEBUG_GRID)
+	SetDebugColors(startPosition, p, t0, output);
+#endif
+*/
+
+	return output;
+}
