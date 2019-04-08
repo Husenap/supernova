@@ -4,7 +4,7 @@
 
 #include "Main.si"
 
-#define MAX_STEPS (100 + time * 10 + 50 * cos(time))
+#define MAX_STEPS (4096)
 
 #define dfloat2 vector<double, 2>
 
@@ -36,14 +36,12 @@ float3 mandelbrot(in float2 uv){
 	}
 
 	float a = (1.0/MAX_STEPS) * i;
-	//a = 1.0 - pow(1.0 - 2.0*a, 2.0);
-	float a1 = 0.5 + 0.5 * cos(a * 25.0+2.342);
-	float a2 = 0.5 + 0.5 * cos(a * 21.3+5.1242);
-	a = 0.5 + 0.5 * cos(a * 23.7);
-	return float3(
-		a,
-		a1,
-		a2
+	a = 1.0 - pow(1.0 - 2.0*a, 2.0);
+	a = 0.5 + 0.5 * cos(a * 25.0);
+	return 1.0 - float3(
+		pow(a, 0.5),
+		pow(a, 1.0),
+		pow(a, 2.0)
 	);
 }
 

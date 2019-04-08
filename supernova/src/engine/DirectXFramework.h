@@ -35,23 +35,12 @@ public:
 
 private:
 	struct ConstantBufferData {
-		CommonUtilities::Matrix44f mCameraOrientation;
-		CommonUtilities::Matrix44f mToCamera;
-		CommonUtilities::Matrix44f mProjection;
-		CommonUtilities::Matrix44f mInvertedProjection;
-		CommonUtilities::Matrix44f mViewProjection;
-		CommonUtilities::Matrix44f mInvertedViewProjection;
-		float mTime;
-		CommonUtilities::Vector3f mTrash;
+		float mTime, t0, t1, t2;
 	} mConstantBufferData;
 
 void UpdateConstantBuffer();
 
 private:
-	bool CollectAdapters(const CommonUtilities::Vector2i& aWindowSize,
-						 CommonUtilities::Vector2i& aOutNumDenom,
-						 IDXGIAdapter*& aOutAdapter);
-
 	void CreateDeviceAndSwapChain(CWindowHandler& aWindowHandler);
 	void CreateBackbuffer();
 	void CreateQuad();

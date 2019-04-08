@@ -1,8 +1,5 @@
 #pragma once
 
-struct HWND__;
-typedef HWND__* HWND;
-
 #include <windows.h>
 
 class CWindowHandler

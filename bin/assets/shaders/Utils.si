@@ -1,15 +1,10 @@
 cbuffer ConstantData : register(b0)
 {
-	float4x4 cameraOrientation;
-	float4x4 toCamera;
-	float4x4 toProjection;
-	float4x4 invertedProjection;
-	float4x4 viewProjection;
-	float4x4 invertedViewProjection;
 	float time;
-	float3 CustomData_trash;
+	float3 ConstantData_trash;
 }
 
+/*
 float3 PosFromMatrix(in float4x4 aMatrix)
 {
 	return float3(aMatrix._14, aMatrix._24, aMatrix._34);
@@ -39,3 +34,4 @@ float DepthFromPosition(in float3 aPosition)
 
 	return projection.z / projection.w;
 }
+*/

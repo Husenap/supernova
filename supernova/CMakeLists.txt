@@ -1,8 +1,5 @@
 set(target_name "supernova")
 
-set(src_precompiled
-	"src/precompiled.h")
-
 set(src_engine
 	"src/engine/supernova.cpp"
 	"src/engine/supernova.h")
@@ -33,14 +30,12 @@ set(src_utils
 
 set(src_files
 	"src/main.cpp"
-	${src_precompiled}
 	${src_engine}
 	${src_dx}
 	${src_utils})
 
 add_executable(${target_name} ${src_files})
 
-source_group("src\\precompiled" FILES ${src_precompiled})
 source_group("src\\engine" FILES ${src_engine})
 source_group("src\\dx" FILES ${src_dx})
 source_group("src\\utils" FILES ${src_utils})
@@ -49,7 +44,6 @@ set_target_properties(${target_name} PROPERTIES FOLDER "supernova")
 set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${target_name} PROPERTIES CMAKE_CXX_STANDARD_REQUIRED ON)
-set_target_properties(${target_name} PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT ${src_precompiled})
 set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_HOME_DIRECTORY}/bin )
 set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_HOME_DIRECTORY}/bin )
 set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_HOME_DIRECTORY}/bin )
@@ -68,5 +62,3 @@ target_link_libraries(${target_name}
 target_compile_options(${target_name} PUBLIC
 	"/Os"
 )
-
-cotire(${target_name})

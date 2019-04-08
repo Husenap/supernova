@@ -3,10 +3,7 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
-
 #include "../precompiled.h"
-
-#include <chrono>
 
 CDirectXFramework::CDirectXFramework() {
 	mContext = NULL;
@@ -38,18 +35,14 @@ bool CDirectXFramework::Init(CWindowHandler& aWindowHandler) {
 }
 
 void CDirectXFramework::CreateDeviceAndSwapChain(CWindowHandler& aWindowHandler) {
-	CommonUtilities::Vector2i numDenom;
-	IDXGIAdapter* adapter = NULL;
-	CollectAdapters({WIDTH, HEIGHT}, numDenom, adapter);
-
 	DXGI_SWAP_CHAIN_DESC swapchainDesc;
 	ZeroMemory(&swapchainDesc, sizeof(DXGI_SWAP_CHAIN_DESC));
 	swapchainDesc.BufferCount = 1;
 	swapchainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapchainDesc.BufferDesc.Width = WIDTH;
 	swapchainDesc.BufferDesc.Height = HEIGHT;
-	swapchainDesc.BufferDesc.RefreshRate.Numerator = numDenom.x;
-	swapchainDesc.BufferDesc.RefreshRate.Denominator = numDenom.y;
+	swapchainDesc.BufferDesc.RefreshRate.Numerator = 0;
+	swapchainDesc.BufferDesc.RefreshRate.Denominator = 1;
 	swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapchainDesc.OutputWindow = aWindowHandler.GetWindowHandle();
 	swapchainDesc.SampleDesc.Count = 1;
@@ -66,8 +59,8 @@ void CDirectXFramework::CreateDeviceAndSwapChain(CWindowHandler& aWindowHandler)
 #endif
 
 	// Create swapchain, device and context
-	D3D11CreateDeviceAndSwapChain(adapter,
-								  D3D_DRIVER_TYPE_UNKNOWN,
+	D3D11CreateDeviceAndSwapChain(NULL,
+								  D3D_DRIVER_TYPE_HARDWARE,
 								  NULL,
 								  creationFlags,
 								  NULL,
@@ -164,10 +157,13 @@ void CDirectXFramework::Present() {
 }
 
 void CDirectXFramework::UpdateConstantBuffer() {
-	static auto startTime = std::chrono::system_clock::now();
-	auto endTime = std::chrono::system_clock::now();
-	std::chrono::duration<float> diff = endTime - startTime;
-	float t = diff.count();
+	static __int64 startCounter;
+	static BOOL _startCounterResult = QueryPerformanceCounter((LARGE_INTEGER*)&startCounter);
+	__int64 counter, frequency;
+	QueryPerformanceCounter((LARGE_INTEGER*)&counter);
+	QueryPerformanceFrequency((LARGE_INTEGER*)&frequency);
+
+	float t = float((counter - startCounter) / double(frequency));
 
 	mConstantBufferData.mTime = t;
 
@@ -179,97 +175,6 @@ void CDirectXFramework::UpdateConstantBuffer() {
 
 	mContext->VSSetConstantBuffers(0, 1, &mConstantBuffer);
 	mContext->PSSetConstantBuffers(0, 1, &mConstantBuffer);
-}
-
-bool CDirectXFramework::CollectAdapters(const CommonUtilities::Vector2i& aWindowSize,
-										CommonUtilities::Vector2i& aOutNumDenom,
-										IDXGIAdapter*& aOutAdapter) {
-	HRESULT result = -1;
-
-	IDXGIFactory* factory = NULL;
-
-	result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
-	if (FAILED(result)) {
-		return false;
-	}
-
-	IDXGIAdapter* usingAdapter = nullptr;
-	int adapterIndex = 0;
-	std::vector<DXGI_ADAPTER_DESC> myAdapterDescs;
-	std::vector<IDXGIAdapter*> myAdapters;
-	while (factory->EnumAdapters(adapterIndex, &usingAdapter) != DXGI_ERROR_NOT_FOUND) {
-		DXGI_ADAPTER_DESC adapterDesc;
-		usingAdapter->GetDesc(&adapterDesc);
-		myAdapterDescs.push_back(adapterDesc);
-		myAdapters.push_back(usingAdapter);
-		++adapterIndex;
-	}
-
-	if (adapterIndex == 0) {
-		return 0;
-	}
-
-	DXGI_ADAPTER_DESC usingAdapterDesc = myAdapterDescs[0];
-	usingAdapter = myAdapters[0];
-
-	const std::wstring nvidia = L"NVIDIA";
-	const std::wstring ati = L"ATI";
-
-	int memory = 0;
-	int mostMem = 0;
-	for (unsigned short i = 0; i < myAdapterDescs.size(); ++i) {
-		DXGI_ADAPTER_DESC& desc = myAdapterDescs[i];
-		memory = static_cast<int>(desc.DedicatedVideoMemory / 1024 / 1024);
-		std::wstring name = desc.Description;
-		if (name.find(nvidia) != name.npos || name.find(ati) != name.npos) {
-			if (memory > mostMem) {
-				mostMem = memory;
-				usingAdapterDesc = desc;
-				usingAdapter = myAdapters[i];
-			}
-		}
-	}
-
-	DXGI_MODE_DESC* displayModeList = nullptr;
-	unsigned int numModes = 0;
-	CommonUtilities::Vector2i numDenom;
-
-	IDXGIOutput* output = nullptr;
-	if (usingAdapter->EnumOutputs(0, &output) != DXGI_ERROR_NOT_FOUND) {
-		result = output->GetDisplayModeList(
-			DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, NULL);
-		if (SUCCEEDED(result)) {
-			displayModeList = new DXGI_MODE_DESC[numModes];
-			if (displayModeList) {
-				result = output->GetDisplayModeList(
-					DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, displayModeList);
-				if (SUCCEEDED(result)) {
-					for (unsigned int i = 0; i < numModes; ++i) {
-						if (displayModeList[i].Width == aWindowSize.x &&
-							displayModeList[i].Height == aWindowSize.y) {
-							numDenom.x = displayModeList[i].RefreshRate.Numerator;
-							numDenom.y = displayModeList[i].RefreshRate.Denominator;
-						}
-					}
-				}
-			}
-		}
-		output->Release();
-	}
-
-	result = usingAdapter->GetDesc(&usingAdapterDesc);
-	if (FAILED(result)) {
-		return false;
-	}
-
-	delete[] displayModeList;
-	factory->Release();
-
-	aOutNumDenom = numDenom;
-
-	aOutAdapter = usingAdapter;
-
-	return true;
 }
 
 enum EShaderProfile { EShaderProfile_Vertex, EShaderProfile_Pixel, EShaderProfile_Count };
