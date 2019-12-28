@@ -1,1 +1,1 @@
-cmake . -A x64 -B .build
+cmake . -B.build

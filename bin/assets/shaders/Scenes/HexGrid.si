@@ -1,0 +1,21 @@
+float HexGridSceneDistance(in float3 p)
+{
+	float r = 2.f;
+	float sr = sqrt(3.f) * r;
+
+	float3 q1 = p;
+	float2 c1 = Mod2(q1.xz, float2(r, sr) * 2.f);
+	Rotate(q1.xz, PI/6.f);
+	q1.y -= sin(c1.x*0.11f + time + c1.y*0.14f)*5.f;
+	float hexA = FHexagonCircumcircle(q1, r, 10.f);
+
+	float3 q2 = p;
+	q2.x += r;
+	q2.z += sr;
+	float2 c2 = Mod2(q2.xz, float2(r, sr) * 2.f);
+	Rotate(q2.xz, PI/6.f);
+	q2.y -= sin(c2.x*0.13f * cos(time*0.78f) - c2.y*0.17f)*5.f;
+	float hexB = FHexagonCircumcircle(q2, r, 10.f);
+
+	return OpUnion(hexA, hexB);
+}

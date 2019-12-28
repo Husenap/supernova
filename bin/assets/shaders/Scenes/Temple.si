@@ -1,0 +1,30 @@
+
+float TempleSceneDistance(
+	float3 p
+)
+{
+	ModPolar(p.zx, 5.f);
+	p.z -= 1.5f;
+
+	Mod1(p.x, 1.5f);
+
+	ModMirror1(p.z, 2.f);
+
+	float box = FBox(p, float3(0.5f, 0.9f, 0.2f));
+	p.y -= 0.9f;
+	float cylinder = FCylinder(p.xzy, 0.5f, 0.2f);
+	p.y += 0.9f;
+
+	float door = OpUnion(box, cylinder);
+
+	float wall = FBox2(p.yz, float2(1.6f, 0.05f));
+	wall = OpDifferenceColumns(wall, door, 0.03f, 4.f);
+
+	float roofSize = 1.f;
+	p.y -= 1.55f;
+	Rotate(p.yz, PI*0.25f);
+	p.y -= roofSize+0.025f;
+	float roof = FBox(p, float3(1.f, roofSize, 0.05f));
+
+	return OpUnionColumns(wall, roof, 0.04f, 5.f);
+}

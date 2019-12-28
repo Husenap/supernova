@@ -1,0 +1,59 @@
+const static int globalNumSteps = 256;
+const static float globalFar = 1000.f;
+const static float globalEpsilon = 1e-3;
+
+#include "Scene.si"
+#include "Debug.si"
+
+float3 CalculateNormal(
+	in float3 aPosition
+)
+{
+	float2 h = float2(1e-3, 0.f);
+
+	return normalize(
+		float3(
+			SceneDistance(aPosition + h.xyy) - SceneDistance(aPosition - h.xyy),
+			SceneDistance(aPosition + h.yxy) - SceneDistance(aPosition - h.yxy),
+			SceneDistance(aPosition + h.yyx) - SceneDistance(aPosition - h.yyx)
+		)
+	);
+}
+
+void RayMarch(
+	in float3 aPosition,
+	in float3 aDirection,
+	out int aIteration,
+	out float aTime
+) {
+	aTime = 0.0f;
+
+	[loop]
+	for(int i = 0; i < globalNumSteps; ++i)
+	{
+		float3 p = aPosition + aDirection * aTime;
+
+		float d = abs(SceneDistance(p));
+
+#ifdef DEBUG_PLANE
+		if(aPosition.y > 0.f)
+		{
+			float plane = FDebugPlane(p);
+			d = min(d, plane);
+		}
+#endif
+
+		if(d < globalEpsilon)
+		{
+			aIteration = i;
+			return;
+		}
+
+		aTime += d;
+
+		if(aTime >= globalFar)
+		{
+			return;
+		}
+	}
+}

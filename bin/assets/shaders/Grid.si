@@ -1,0 +1,33 @@
+//world space grid shader
+const static float _Scale = 0.5f;
+float LineValue(float2 aRange, float aThickness, float aScale)
+{
+	float2 r = abs((aRange/_Scale)*2.f - 1.f);
+
+	float thickness = 1.f - (aThickness/aScale);
+	float f = smoothstep(thickness-0.05f, thickness+0.05f, max(r.x, r.y));
+
+	return length(f);
+}
+float Contrast(float aValue)
+{
+	return smoothstep(0.25f, 1.f, aValue);
+}
+float3 GridColor(in float3 aPosition, in float3 aNormal)
+{
+	float fxz = LineValue(fmod(fmod(aPosition.xz, _Scale)+_Scale, _Scale), 0.01f*_Scale, _Scale);
+	float sfxz = LineValue(fmod(fmod(aPosition.xz*5.f, _Scale) + _Scale, _Scale), 0.0075f*_Scale, _Scale/5.f);
+
+	float fyz = LineValue(fmod(fmod(aPosition.yz, _Scale)+_Scale, _Scale), 0.01f*_Scale, _Scale);
+	float sfyz = LineValue(fmod(fmod(aPosition.yz*5.f, _Scale) + _Scale, _Scale), 0.0075f*_Scale, _Scale/5.f);
+
+	float fxy = LineValue(fmod(fmod(aPosition.xy, _Scale)+_Scale, _Scale), 0.01f*_Scale, _Scale);
+	float sfxy = LineValue(fmod(fmod(aPosition.xy*5.f, _Scale) + _Scale, _Scale), 0.0075f*_Scale, _Scale/5.f);
+
+	float f = lerp(fxz, fyz, Contrast(abs(aNormal.x)));
+	f = lerp(f, fxy, Contrast(abs(aNormal.z)));
+	float sf = lerp(sfxz, sfyz, Contrast(abs(aNormal.x)));
+	sf = lerp(sf, sfxy, Contrast(abs(aNormal.z)));
+
+	return saturate(1.f - (max(sf*0.5f,f)*0.9f+0.1f));
+}
